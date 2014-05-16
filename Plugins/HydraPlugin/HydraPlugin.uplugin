@@ -1,0 +1,20 @@
+{
+    "FileVersion" : 3,
+	
+	"FriendlyName" : "Hydra Plugin",
+	"Version" : 1,
+	"VersionName" : "1.0",
+	"CreatedBy" : "Getnamo",
+	"CreatedByURL" : "http://syntheticinsights.com",
+	"EngineVersion" : 1579795,
+	"Description" : "Unofficial plugin for the Razer Hydra Motion Controller",
+	"Category" : "Input.Controller",
+	
+    "Modules" :
+	[
+		{
+			"Name" : "HydraPlugin",
+			"Type" : "Runtime"
+		}
+	]
+}
