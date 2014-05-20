@@ -47,9 +47,9 @@ public:
 	{
 		sixenseControllerDataUE converted;
 
-		//converted.position = FVector(data->pos[0], data->pos[1], data->pos[2]);
-		converted.position = FVector(-data->pos[2], data->pos[0], data->pos[1]);	//NB: sixense axis is different to unreal
-		converted.rotation = FQuat(data->rot_quat[0], data->rot_quat[1], data->rot_quat[2], data->rot_quat[3]);
+		//Convert Sixense Axis to Unreal: UnrealX = - SixenseZ   UnrealY = SixenseX   UnrealZ = SixenseY
+		converted.position = FVector(-data->pos[2], data->pos[0], data->pos[1]);	//converted
+		converted.rotation = FQuat(data->rot_quat[2], -data->rot_quat[0], -data->rot_quat[1], data->rot_quat[3]);	//converted & rotation values inverted
 		converted.joystick = FVector2D(data->joystick_x, data->joystick_y);
 		converted.trigger = data->trigger;
 		converted.buttons = data->buttons;
