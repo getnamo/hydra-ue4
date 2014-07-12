@@ -1,4 +1,4 @@
-Overview
+## Overview ##
 
 
 An Unofficial Razer Hydra Plugin for the Unreal Engine 4
@@ -40,10 +40,11 @@ See tutorial video for a live example.
 
 ### Events through C++ ###
 
+#### Simple Version ####
 Use, embed, or subclass HydraPluginActor or HydraPlayerController and override functions you wish to subscribe to e.g.
 ```virtual void EventHydraTriggerPressed(int32 controller) OVERRIDE;```
 
-Extend your own Class to Receive Events through C++
+#### Extend your own Class to Receive Events through C++ ####
 
  1.	Include HydraDelegate.h and IHydraPlugin.h in your implementation
  2.	Ensure your project has "HydraPlugin" added to your PublicDependencyModuleNames in your *{Project}.build.cs*
