@@ -7,7 +7,7 @@ The plugin is designed with an event driven architecture through a delegate inte
 
 The plugin also handles hot plugging and emits HydraPluggedIn (HydraUnplugged for the reverse), allowing you to initialize if needed when the device is ready.
 
-Main discussion thread 
+[Main discussion thread](https://forums.unrealengine.com/showthread.php?3505-Razer-Hydra-Plugin)
 
 ## Quick Setup ##
 
@@ -36,7 +36,7 @@ Compile and Play to see the position data stream as printed output after you und
 
 Optionally create a blueprint subclass from HydraPlayerControllerand assign it in your game mode. Functionality remains the same.
 
-See tutorial video for a live example.
+See [tutorial video](https://www.youtube.com/watch?v=zRURG4Zp0Zo) for a live example.
 
 ### Events through C++ ###
 
@@ -55,7 +55,7 @@ Use, embed, or subclass HydraPluginActor or HydraPlayerController and override f
  7.	Add ```IHydraPlugin::Get().HydraTick(DeltaTime); insideTick(float DeltaTime)```
  8.	Override any of the delegate methods to receive the events.
 
-See tutorial video for a live example.
+See [tutorial video](https://www.youtube.com/watch?v=zRURG4Zp0Zo) for a live example.
 
 ## Credit ##
 Plugin made by Getnamo. Point all questions to the main discussion thread.
