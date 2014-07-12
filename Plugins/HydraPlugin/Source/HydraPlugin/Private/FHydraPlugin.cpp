@@ -89,7 +89,7 @@ public:
 void FHydraPlugin::StartupModule()
 {
 	UE_LOG(LogClass, Log, TEXT("Attempting to startup Hydra Module."));
-	try {
+	//try { //Removed because of C4530 (http://msdn.microsoft.com/en-us/library/2axwkyt4.aspx)
 		collector = new DataCollector;
 
 		FString DllFilename = FPaths::ConvertRelativePathToFull(FPaths::Combine(*FPaths::GameDir(),
@@ -118,10 +118,10 @@ void FHydraPlugin::StartupModule()
 		{
 			UE_LOG(LogClass, Log, TEXT("Hydra Unavailable."));
 		}
-	}
+	/*}
 	catch (const std::exception& e) {
 		UE_LOG(LogClass, Log, TEXT("Error: %s"),e.what());
-	}
+	}*/
 }
 
 void FHydraPlugin::ShutdownModule()
