@@ -7,7 +7,7 @@ The plugin is designed with an event driven architecture through a delegate inte
 
 The plugin also handles hot plugging and emits HydraPluggedIn (HydraUnplugged for the reverse), allowing you to initialize if needed when the device is ready.
 
-Main discussion thread 
+[Main discussion thread](https://forums.unrealengine.com/showthread.php?3505-Razer-Hydra-Plugin)
 
 ## Quick Setup ##
 
@@ -19,6 +19,19 @@ Main discussion thread
  6.	Select Window->Plugins. Click on Installed and you should see a category called Input and a plugin called Hydra Plugin now available. Select Enabled. The Editor will warn you to restart, click restart.
  7.	When your project has reloaded, the plugin should be enabled and ready to use.
 (Optional) You can confirm it has successfully loaded by opening the Class Viewer, searching "hydra" should show you one actor class added by the plugin calledHydraPluginActor.
+
+### Input Mapping ###
+
+ 1.	For a good example start with a template project.
+ 2.	Use the HydraPluginController or the HydraPluginActor (NB the convenience actor needs to be placed and doesn't receive input mapping events but it does forward the input mapping correctly to Engine->Input)
+ 3.	Select Edit->Project Settings.
+ 4.	Select Engine->Input
+ 5.	Under Action Mappings and Axis Mappings expand the category you wish to add controller movement to. For example if you want to add Forward motion in the standard 3rd person template, click the + sign in MoveForward.
+ 6.	Change None to the binding you want and adjust the scale to fit. If for example you wanted this to happen when you pitch your left hydra down you would select Hydra Left Rotation Pitch with a scale of say -2.0 to have snappier controls.
+ 7.	Play and test your scaling adjust as needed.
+
+(Optional) Use key and axis events in any input derived class blueprint (such as controller). Note note that any events you override will cause Engine->Input mapping to stop working for that bind.
+
 
 ### Events through Blueprint ###
 
@@ -36,7 +49,7 @@ Compile and Play to see the position data stream as printed output after you und
 
 Optionally create a blueprint subclass from HydraPlayerControllerand assign it in your game mode. Functionality remains the same.
 
-See tutorial video for a live example.
+See [tutorial video](https://www.youtube.com/watch?v=zRURG4Zp0Zo) for a live example.
 
 ### Events through C++ ###
 
@@ -55,7 +68,7 @@ Use, embed, or subclass HydraPluginActor or HydraPlayerController and override f
  7.	Add ```IHydraPlugin::Get().HydraTick(DeltaTime); insideTick(float DeltaTime)```
  8.	Override any of the delegate methods to receive the events.
 
-See tutorial video for a live example.
+See [tutorial video](https://www.youtube.com/watch?v=zRURG4Zp0Zo) for a live example.
 
 ## Credit ##
 Plugin made by Getnamo. Point all questions to the main discussion thread.

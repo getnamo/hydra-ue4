@@ -26,37 +26,37 @@ class AHydraPluginActor : public AActor, public HydraDelegate	//Multiple Inherit
 	 * but if you're extending C++ class yourself you can override just the ones
 	 * you are interested in.
 	 */
-	virtual void EventHydraPluggedIn() OVERRIDE;
-	virtual void EventHydraUnplugged() OVERRIDE;
-	virtual void EventHydraControllerEnabled(int32 controller) OVERRIDE;
-	virtual void EventHydraControllerDisabled(int32 controller) OVERRIDE;
+	virtual void EventHydraPluggedIn() override;
+	virtual void EventHydraUnplugged() override;
+	virtual void EventHydraControllerEnabled(int32 controller) override;
+	virtual void EventHydraControllerDisabled(int32 controller) override;
 
-	virtual void EventHydraDocked(int32 controller) OVERRIDE;
-	virtual void EventHydraUndocked(int32 controller) OVERRIDE;
+	virtual void EventHydraDocked(int32 controller) override;
+	virtual void EventHydraUndocked(int32 controller) override;
 
-	virtual void EventHydraAnyButtonPressed(int32 controller) OVERRIDE;
-	virtual void EventHydraB1Pressed(int32 controller) OVERRIDE;
-	virtual void EventHydraB1Released(int32 controller) OVERRIDE;
-	virtual void EventHydraB2Pressed(int32 controller) OVERRIDE;
-	virtual void EventHydraB2Released(int32 controller) OVERRIDE;
-	virtual void EventHydraB3Pressed(int32 controller) OVERRIDE;
-	virtual void EventHydraB3Released(int32 controller) OVERRIDE;
-	virtual void EventHydraB4Pressed(int32 controller) OVERRIDE;
-	virtual void EventHydraB4Released(int32 controller) OVERRIDE;
-	virtual void EventHydraTriggerPressed(int32 controller) OVERRIDE;
-	virtual void EventHydraTriggerReleased(int32 controller) OVERRIDE;
-	virtual void EventHydraTriggerChanged(int32 controller, float value) OVERRIDE;
-	virtual void EventHydraBumperPressed(int32 controller) OVERRIDE;
-	virtual void EventHydraBumperReleased(int32 controller) OVERRIDE;
-	virtual void EventHydraJoystickPressed(int32 controller) OVERRIDE;
-	virtual void EventHydraJoystickReleased(int32 controller) OVERRIDE;
-	virtual void EventHydraStartPressed(int32 controller) OVERRIDE;
-	virtual void EventHydraStartReleased(int32 controller) OVERRIDE;
+	virtual void EventHydraAnyButtonPressed(int32 controller) override;
+	virtual void EventHydraB1Pressed(int32 controller) override;
+	virtual void EventHydraB1Released(int32 controller) override;
+	virtual void EventHydraB2Pressed(int32 controller) override;
+	virtual void EventHydraB2Released(int32 controller) override;
+	virtual void EventHydraB3Pressed(int32 controller) override;
+	virtual void EventHydraB3Released(int32 controller) override;
+	virtual void EventHydraB4Pressed(int32 controller) override;
+	virtual void EventHydraB4Released(int32 controller) override;
+	virtual void EventHydraTriggerPressed(int32 controller) override;
+	virtual void EventHydraTriggerReleased(int32 controller) override;
+	virtual void EventHydraTriggerChanged(int32 controller, float value) override;
+	virtual void EventHydraBumperPressed(int32 controller) override;
+	virtual void EventHydraBumperReleased(int32 controller) override;
+	virtual void EventHydraJoystickPressed(int32 controller) override;
+	virtual void EventHydraJoystickReleased(int32 controller) override;
+	virtual void EventHydraStartPressed(int32 controller) override;
+	virtual void EventHydraStartReleased(int32 controller) override;
 
-	virtual void EventHydraJoystickMoved(int32 controller, FVector2D movement) OVERRIDE;
+	virtual void EventHydraJoystickMoved(int32 controller, FVector2D movement) override;
 	virtual void EventHydraControllerMoved(int32 controller,
 		FVector position, FVector velocity, FVector acceleration,
-		FRotator rotation) OVERRIDE;
+		FRotator rotation) override;
 
 	//Define blueprint events
 
@@ -138,8 +138,8 @@ class AHydraPluginActor : public AActor, public HydraDelegate	//Multiple Inherit
 		FVector2D& joystick, int32& buttons, float& trigger, bool& docked);
 
 	//Required for delegate to function
-	virtual void BeginPlay() OVERRIDE;
-	virtual void Tick(float DeltaTime) OVERRIDE;
+	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaTime) override;
 };
 
 
