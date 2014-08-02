@@ -37,10 +37,9 @@ public:
 
 	/**
 	 * Public API, implemented in FHydraPlugin.cpp
-	 * Required API
+	 * Required API called by HydraDelegate via HydraStartup() and HydraTick(float);
 	 */
 	virtual void HydraTick(float DeltaTime) {};
-
 	virtual void SetDelegate(HydraDelegate* newDelegate) {};
 };
 

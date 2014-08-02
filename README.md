@@ -55,7 +55,7 @@ See [tutorial video](https://www.youtube.com/watch?v=zRURG4Zp0Zo) for a live exa
 
 #### Simple Version ####
 Use, embed, or subclass HydraPluginActor or HydraPlayerController and override functions you wish to subscribe to e.g.
-```virtual void EventHydraTriggerPressed(int32 controller) OVERRIDE;```
+```virtual void HydraTriggerPressed(int32 controller) override;```
 
 #### Extend your own Class to Receive Events through C++ ####
 
@@ -63,9 +63,9 @@ Use, embed, or subclass HydraPluginActor or HydraPlayerController and override f
  2.	Ensure your project has "HydraPlugin" added to your PublicDependencyModuleNames in your *{Project}.build.cs*
  3.	Make your class inherit from HydraDelegate (multiple inheritence)
  4.	Copy HydraDelegate.cpp from the plugin source into your project source and add it your solution. Change top include to "your project name.h"
- 5.	Add ```IHydraPlugin::Get().SetDelegate((HydraDelegate*)this);``` in your ```BeginPlay()``` or other initialization that is executed before the first tick.
+ 5.	Add ```HydraStartup()``` in your ```BeginPlay()``` or other initialization that is executed before the first tick.
  6.	Make your class tickable e.g. ```PrimaryActorTick.bCanEverTick = true;``` in your constructor.
- 7.	Add ```IHydraPlugin::Get().HydraTick(DeltaTime); insideTick(float DeltaTime)```
+ 7.	Add ```HydraTick(DeltaTime); insideTick(float DeltaTime)```
  8.	Override any of the delegate methods to receive the events.
 
 See [tutorial video](https://www.youtube.com/watch?v=zRURG4Zp0Zo) for a live example.

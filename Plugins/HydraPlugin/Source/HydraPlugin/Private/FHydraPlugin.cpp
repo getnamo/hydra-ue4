@@ -4,6 +4,7 @@
 
 #include "FHydraPlugin.h"
 #include "HydraDelegate.h"
+#include "Slate.h"
 
 #include <iostream>
 #include <stdexcept>
@@ -14,6 +15,7 @@
 IMPLEMENT_MODULE(FHydraPlugin, HydraPlugin)
 
 #define LOCTEXT_NAMESPACE "HydraPlugin"
+#define TO_RADIANS 0.0174532925
 
 
 //Private API - This is where the magic happens
@@ -68,20 +70,21 @@ const FKey EKeysHydra::HydraRightRotationPitch("HydraRightRotationPitch");
 const FKey EKeysHydra::HydraRightRotationYaw("HydraRightRotationYaw");
 const FKey EKeysHydra::HydraRightRotationRoll("HydraRightRotationRoll");
 
-
+//Collector class contains all the data captured from .dll and delegate data will point to this structure (allDataUE and historicalDataUE).
 class DataCollector
 {
 public:
 	DataCollector()
 	{
-		hydraDelegate = NULL;
 		allData = new sixenseAllControllerData;
 		allDataUE = new sixenseAllControllerDataUE;
+		historicalDataUE = new sixenseAllControllerDataUE[10];
 	}
 	~DataCollector()
 	{
 		delete allData;
 		delete allDataUE;
+		delete[] historicalDataUE;
 	}
 
 	sixenseControllerDataUE ConvertData(sixenseControllerData* data)
@@ -89,8 +92,9 @@ public:
 		sixenseControllerDataUE converted;
 
 		//Convert Sixense Axis to Unreal: UnrealX = - SixenseZ   UnrealY = SixenseX   UnrealZ = SixenseY
-		converted.position = FVector(-data->pos[2]/10, data->pos[0]/10, data->pos[1]/10);	//converted
-		converted.rotation = FQuat(data->rot_quat[2], -data->rot_quat[0], -data->rot_quat[1], data->rot_quat[3]);	//converted & rotation values inverted
+		converted.position = FVector(-data->pos[2]/10, data->pos[0]/10, data->pos[1]/10);							//converted to cm from mm
+		converted.quat = FQuat(data->rot_quat[2], -data->rot_quat[0], -data->rot_quat[1], data->rot_quat[3]);		//converted & rotation values inverted
+		converted.rotation = FRotator(converted.quat);																//convert once and re-use in blueprints
 		converted.joystick = FVector2D(data->joystick_x, data->joystick_y);
 		converted.trigger = data->trigger;
 		converted.buttons = data->buttons;
@@ -123,7 +127,7 @@ public:
 
 	sixenseAllControllerDataUE* allDataUE;
 	sixenseAllControllerData* allData;
-	HydraDelegate* hydraDelegate;
+	sixenseAllControllerDataUE* historicalDataUE;
 };
 
 //Init and Runtime
@@ -210,6 +214,8 @@ void FHydraPlugin::StartupModule()
 	}*/
 }
 
+#undef LOCTEXT_NAMESPACE
+
 void FHydraPlugin::ShutdownModule()
 {
 	int cleanshutdown = HydraExit();
@@ -231,8 +237,9 @@ void FHydraPlugin::ShutdownModule()
 
 void FHydraPlugin::SetDelegate(HydraDelegate* newDelegate)
 {
-	collector->hydraDelegate = newDelegate;
-	collector->hydraDelegate->HydraLatestData = collector->allDataUE;	//set the delegate latest pointer
+	hydraDelegate = newDelegate;
+	hydraDelegate->HydraLatestData = collector->allDataUE;	//set the delegate latest data pointer
+	hydraDelegate->HydraHistoryData = collector->historicalDataUE; //set the delegate history data pointer
 }
 
 void FHydraPlugin::HydraTick(float DeltaTime)
@@ -252,10 +259,370 @@ void FHydraPlugin::HydraTick(float DeltaTime)
 	//convert and pass the data to the delegate
 	collector->ConvertAllData();
 
-	//update our delegate pointer to point to the freshest data (may be redundant but has to be called once)
-	if (collector->hydraDelegate != NULL)
+	//Call the delegate once it has been set
+	if (hydraDelegate != NULL)
 	{
-		collector->hydraDelegate->HydraLatestData = collector->allDataUE;	//ensure the delegate.latest is always pointing to our converted data
-		collector->hydraDelegate->InternalHydraControllerTick(DeltaTime);
+		DelegateTick(DeltaTime);
 	}
+}
+
+
+/** Delegate Functions, called by plugin to keep data in sync and to emit the events.*/
+void FHydraPlugin::DelegateUpdateAllData()
+{
+	hydraDelegate->HydraHistoryData[9] = hydraDelegate->HydraHistoryData[8];
+	hydraDelegate->HydraHistoryData[8] = hydraDelegate->HydraHistoryData[7];
+	hydraDelegate->HydraHistoryData[7] = hydraDelegate->HydraHistoryData[6];
+	hydraDelegate->HydraHistoryData[6] = hydraDelegate->HydraHistoryData[5];
+	hydraDelegate->HydraHistoryData[5] = hydraDelegate->HydraHistoryData[4];
+	hydraDelegate->HydraHistoryData[4] = hydraDelegate->HydraHistoryData[3];
+	hydraDelegate->HydraHistoryData[3] = hydraDelegate->HydraHistoryData[2];
+	hydraDelegate->HydraHistoryData[2] = hydraDelegate->HydraHistoryData[1];
+	hydraDelegate->HydraHistoryData[1] = hydraDelegate->HydraHistoryData[0];
+	//NB: HydraHistoryData[0] = *HydraLatestData gets updated after the tick to take in integrated data
+}
+
+void FHydraPlugin::DelegateCheckEnabledCount(bool* plugNotChecked)
+{
+	if (!*plugNotChecked) return;
+
+	sixenseAllControllerDataUE* previous = &hydraDelegate->HydraHistoryData[0];
+	int32 oldCount = previous->enabledCount;
+	int32 count = hydraDelegate->HydraLatestData->enabledCount;
+	if (oldCount != count)
+	{
+		if (count == 2)	//hydra controller number, STEM behavior undefined.
+		{
+			hydraDelegate->HydraPluggedIn();
+			*plugNotChecked = false;
+		}
+		else if (count == 0)
+		{
+			hydraDelegate->HydraUnplugged();
+			*plugNotChecked = false;
+		}
+	}
+}
+
+//Function used for consistent conversion to input mapping basis
+float MotionInputMappingConversion(float AxisValue){
+	return FMath::Clamp(AxisValue / 200.f, -1.f, 1.f);
+}
+
+/** Internal Tick - Called by the Plugin */
+void FHydraPlugin::DelegateTick(float DeltaTime)
+{
+	//Update Data History
+	DelegateUpdateAllData();
+
+	sixenseControllerDataUE* controller;
+	sixenseControllerDataUE* previous;
+	bool plugNotChecked = true;
+
+	//Trigger any delegate events
+	for (int i = 0; i < 4; i++)
+	{
+		controller = &hydraDelegate->HydraLatestData->controllers[i];
+		previous = &hydraDelegate->HydraHistoryData[0].controllers[i];
+
+		//If it is enabled run through all the event notifications and data integration
+		if (controller->enabled)
+		{
+			//Enable Check
+			if (controller->enabled != previous->enabled)
+			{
+				DelegateCheckEnabledCount(&plugNotChecked);
+				hydraDelegate->HydraControllerEnabled(i);
+			}
+
+			//Docking
+			if (controller->is_docked != previous->is_docked)
+			{
+				if (controller->is_docked)
+				{
+					hydraDelegate->HydraDocked(i);
+				}
+				else{
+					hydraDelegate->HydraUndocked(i);
+				}
+			}
+
+			//Determine Hand to support dynamic input mapping
+			bool leftHand = hydraDelegate->HydraWhichHand(i) == 1;
+
+			//** Buttons */
+
+			//Trigger
+			if (controller->trigger < 0.5)
+			{
+				controller->trigger_pressed = false;
+			}
+			else{
+				controller->trigger_pressed = true;
+			}
+
+			if (controller->trigger != previous->trigger)
+			{
+				hydraDelegate->HydraTriggerChanged(i, controller->trigger);
+				//InputMapping
+				if (leftHand)
+					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraLeftTrigger, 0, controller->trigger);
+				else
+					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraRightTrigger, 0, controller->trigger);
+
+				if (controller->trigger_pressed != previous->trigger_pressed)
+				{
+
+					if (controller->trigger_pressed)
+					{
+						hydraDelegate->HydraAnyButtonPressed(i);
+						hydraDelegate->HydraTriggerPressed(i);
+						//InputMapping
+						if (leftHand)
+							FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraLeftTriggerClick, 0, 0);
+						else
+							FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraRightTriggerClick, 0, 0);
+					}
+					else{
+						hydraDelegate->HydraTriggerReleased(i);
+						//InputMapping
+						if (leftHand)
+							FSlateApplication::Get().OnControllerButtonReleased(EKeysHydra::HydraLeftTriggerClick, 0, 0);
+						else
+							FSlateApplication::Get().OnControllerButtonReleased(EKeysHydra::HydraRightTriggerClick, 0, 0);
+					}
+				}
+			}
+
+			//Bumper
+			if ((controller->buttons & SIXENSE_BUTTON_BUMPER) != (previous->buttons & SIXENSE_BUTTON_BUMPER))
+			{
+				if ((controller->buttons & SIXENSE_BUTTON_BUMPER) == SIXENSE_BUTTON_BUMPER)
+				{
+					hydraDelegate->HydraAnyButtonPressed(i);
+					hydraDelegate->HydraBumperPressed(i);
+					//InputMapping
+					if (leftHand)
+						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraLeftBumper, 0, 0);
+					else
+						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraRightBumper, 0, 0);
+				}
+				else{
+					hydraDelegate->HydraBumperReleased(i);
+					//InputMapping
+					if (leftHand)
+						FSlateApplication::Get().OnControllerButtonReleased(EKeysHydra::HydraLeftBumper, 0, 0);
+					else
+						FSlateApplication::Get().OnControllerButtonReleased(EKeysHydra::HydraRightBumper, 0, 0);
+				}
+			}
+
+			//B1
+			if ((controller->buttons & SIXENSE_BUTTON_1) != (previous->buttons & SIXENSE_BUTTON_1))
+			{
+				if ((controller->buttons & SIXENSE_BUTTON_1) == SIXENSE_BUTTON_1)
+				{
+					hydraDelegate->HydraAnyButtonPressed(i);
+					hydraDelegate->HydraB1Pressed(i);
+					//InputMapping
+					if (leftHand)
+						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraLeftB1, 0, 0);
+					else
+						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraRightB1, 0, 0);
+				}
+				else{
+					hydraDelegate->HydraB1Released(i);
+					//InputMapping
+					if (leftHand)
+						FSlateApplication::Get().OnControllerButtonReleased(EKeysHydra::HydraLeftB1, 0, 0);
+					else
+						FSlateApplication::Get().OnControllerButtonReleased(EKeysHydra::HydraRightB1, 0, 0);
+				}
+			}
+			//B2
+			if ((controller->buttons & SIXENSE_BUTTON_2) != (previous->buttons & SIXENSE_BUTTON_2))
+			{
+				if ((controller->buttons & SIXENSE_BUTTON_2) == SIXENSE_BUTTON_2)
+				{
+					hydraDelegate->HydraAnyButtonPressed(i);
+					hydraDelegate->HydraB2Pressed(i);
+					//InputMapping
+					if (leftHand)
+						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraLeftB2, 0, 0);
+					else
+						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraRightB2, 0, 0);
+				}
+				else{
+					hydraDelegate->HydraB2Released(i);
+					//InputMapping
+					if (leftHand)
+						FSlateApplication::Get().OnControllerButtonReleased(EKeysHydra::HydraLeftB2, 0, 0);
+					else
+						FSlateApplication::Get().OnControllerButtonReleased(EKeysHydra::HydraRightB2, 0, 0);
+				}
+			}
+			//B3
+			if ((controller->buttons & SIXENSE_BUTTON_3) != (previous->buttons & SIXENSE_BUTTON_3))
+			{
+				if ((controller->buttons & SIXENSE_BUTTON_3) == SIXENSE_BUTTON_3)
+				{
+					hydraDelegate->HydraAnyButtonPressed(i);
+					hydraDelegate->HydraB3Pressed(i);
+					//InputMapping
+					if (leftHand)
+						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraLeftB3, 0, 0);
+					else
+						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraRightB3, 0, 0);
+				}
+				else{
+					hydraDelegate->HydraB3Released(i);
+					//InputMapping
+					if (leftHand)
+						FSlateApplication::Get().OnControllerButtonReleased(EKeysHydra::HydraLeftB3, 0, 0);
+					else
+						FSlateApplication::Get().OnControllerButtonReleased(EKeysHydra::HydraRightB3, 0, 0);
+				}
+			}
+			//B4
+			if ((controller->buttons & SIXENSE_BUTTON_4) != (previous->buttons & SIXENSE_BUTTON_4))
+			{
+				if ((controller->buttons & SIXENSE_BUTTON_4) == SIXENSE_BUTTON_4)
+				{
+					hydraDelegate->HydraAnyButtonPressed(i);
+					hydraDelegate->HydraB4Pressed(i);
+					//InputMapping
+					if (leftHand)
+						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraLeftB4, 0, 0);
+					else
+						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraRightB4, 0, 0);
+				}
+				else{
+					hydraDelegate->HydraB4Released(i);
+					//InputMapping
+					if (leftHand)
+						FSlateApplication::Get().OnControllerButtonReleased(EKeysHydra::HydraLeftB4, 0, 0);
+					else
+						FSlateApplication::Get().OnControllerButtonReleased(EKeysHydra::HydraRightB4, 0, 0);
+				}
+			}
+
+			//Start
+			if ((controller->buttons & SIXENSE_BUTTON_START) != (previous->buttons & SIXENSE_BUTTON_START))
+			{
+				if ((controller->buttons & SIXENSE_BUTTON_START) == SIXENSE_BUTTON_START)
+				{
+					hydraDelegate->HydraAnyButtonPressed(i);
+					hydraDelegate->HydraStartPressed(i);
+					//InputMapping
+					if (leftHand)
+						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraLeftStart, 0, 0);
+					else
+						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraRightStart, 0, 0);
+				}
+				else{
+					hydraDelegate->HydraStartReleased(i);
+					//InputMapping
+					if (leftHand)
+						FSlateApplication::Get().OnControllerButtonReleased(EKeysHydra::HydraLeftStart, 0, 0);
+					else
+						FSlateApplication::Get().OnControllerButtonReleased(EKeysHydra::HydraRightStart, 0, 0);
+				}
+			}
+
+			//Joystick Click
+			if ((controller->buttons & SIXENSE_BUTTON_JOYSTICK) != (previous->buttons & SIXENSE_BUTTON_JOYSTICK))
+			{
+				if ((controller->buttons & SIXENSE_BUTTON_JOYSTICK) == SIXENSE_BUTTON_JOYSTICK)
+				{
+					hydraDelegate->HydraAnyButtonPressed(i);
+					hydraDelegate->HydraJoystickPressed(i);
+					//InputMapping
+					if (leftHand)
+						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraLeftJoystickClick, 0, 0);
+					else
+						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraRightJoystickClick, 0, 0);
+				}
+				else{
+					hydraDelegate->HydraJoystickReleased(i);
+					//InputMapping
+					if (leftHand)
+						FSlateApplication::Get().OnControllerButtonReleased(EKeysHydra::HydraLeftJoystickClick, 0, 0);
+					else
+						FSlateApplication::Get().OnControllerButtonReleased(EKeysHydra::HydraRightJoystickClick, 0, 0);
+				}
+			}
+
+			/** Movement */
+
+			//Joystick
+			if (controller->joystick.X != previous->joystick.X ||
+				controller->joystick.Y != previous->joystick.Y)
+			{
+				hydraDelegate->HydraJoystickMoved(i, controller->joystick);
+				//InputMapping
+				if (leftHand)
+				{
+					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraLeftJoystickX, 0, controller->joystick.X);
+					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraLeftJoystickY, 0, controller->joystick.Y);
+				}
+				else
+				{
+					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraRightJoystickX, 0, controller->joystick.X);
+					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraRightJoystickY, 0, controller->joystick.Y);
+				}
+			}
+
+			//Controller
+
+			//Calculate Velocity, Acceleration, and angular velocity
+			controller->velocity = (controller->position - previous->position) / DeltaTime;
+			controller->acceleration = (controller->velocity - previous->velocity) / DeltaTime;
+			controller->angular_velocity = FRotator(controller->quat - previous->quat);	//unscaled by deltatime
+			float DeltaSquared = (DeltaTime*DeltaTime);
+			controller->angular_velocity = FRotator(controller->angular_velocity.Pitch / DeltaSquared,
+				controller->angular_velocity.Yaw / DeltaSquared,
+				controller->angular_velocity.Roll / DeltaSquared);	//has to be scaled here to avoid clamping in the quaternion initialization
+
+			if (!controller->is_docked){
+				FRotator rotation = FRotator(controller->rotation);
+
+				//If the controller isn't docked, it's moving
+				hydraDelegate->HydraControllerMoved(i,
+					controller->position, controller->velocity, controller->acceleration,
+					rotation, controller->angular_velocity);
+
+				//InputMapping
+				if (leftHand)
+				{
+					//2 meters = 1.0
+					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraLeftMotionX, 0, MotionInputMappingConversion(controller->position.X));
+					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraLeftMotionY, 0, MotionInputMappingConversion(controller->position.Y));
+					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraLeftMotionZ, 0, MotionInputMappingConversion(controller->position.Z));
+					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraLeftRotationPitch, 0, rotation.Pitch / 90.f);
+					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraLeftRotationYaw, 0, rotation.Yaw / 180.f);
+					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraLeftRotationRoll, 0, rotation.Roll / 180.f);
+				}
+				else
+				{
+					//2 meters = 1.0
+					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraRightMotionX, 0, MotionInputMappingConversion(controller->position.X));
+					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraRightMotionY, 0, MotionInputMappingConversion(controller->position.Y));
+					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraRightMotionZ, 0, MotionInputMappingConversion(controller->position.Z));
+					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraRightRotationPitch, 0, rotation.Pitch / 90.f);
+					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraRightRotationYaw, 0, rotation.Yaw / 180.f);
+					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraRightRotationRoll, 0, rotation.Roll / 180.f);
+				}
+			}
+		}//end enabled
+		else{
+			if (controller->enabled != previous->enabled)
+			{
+				DelegateCheckEnabledCount(&plugNotChecked);
+				hydraDelegate->HydraControllerDisabled(i);
+			}
+		}
+	}//end controller for loop
+
+	//Update the stored data with the integrated data obtained from latest
+	hydraDelegate->HydraHistoryData[0] = *hydraDelegate->HydraLatestData;
 }

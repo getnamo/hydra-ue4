@@ -11,8 +11,6 @@
  * override any delegate functions to receive notifications.
  * Calling super is not necessary.
  *
- * NB: This is just an example actor, use the HydraPlayerController for own
- * classes.
  * Copy implementations to receive same functionality in a different class.
  */
 
@@ -26,40 +24,8 @@ class AHydraPluginActor : public AActor, public HydraDelegate	//Multiple Inherit
 	 * but if you're extending C++ class yourself you can override just the ones
 	 * you are interested in.
 	 */
-	virtual void EventHydraPluggedIn() override;
-	virtual void EventHydraUnplugged() override;
-	virtual void EventHydraControllerEnabled(int32 controller) override;
-	virtual void EventHydraControllerDisabled(int32 controller) override;
-
-	virtual void EventHydraDocked(int32 controller) override;
-	virtual void EventHydraUndocked(int32 controller) override;
-
-	virtual void EventHydraAnyButtonPressed(int32 controller) override;
-	virtual void EventHydraB1Pressed(int32 controller) override;
-	virtual void EventHydraB1Released(int32 controller) override;
-	virtual void EventHydraB2Pressed(int32 controller) override;
-	virtual void EventHydraB2Released(int32 controller) override;
-	virtual void EventHydraB3Pressed(int32 controller) override;
-	virtual void EventHydraB3Released(int32 controller) override;
-	virtual void EventHydraB4Pressed(int32 controller) override;
-	virtual void EventHydraB4Released(int32 controller) override;
-	virtual void EventHydraTriggerPressed(int32 controller) override;
-	virtual void EventHydraTriggerReleased(int32 controller) override;
-	virtual void EventHydraTriggerChanged(int32 controller, float value) override;
-	virtual void EventHydraBumperPressed(int32 controller) override;
-	virtual void EventHydraBumperReleased(int32 controller) override;
-	virtual void EventHydraJoystickPressed(int32 controller) override;
-	virtual void EventHydraJoystickReleased(int32 controller) override;
-	virtual void EventHydraStartPressed(int32 controller) override;
-	virtual void EventHydraStartReleased(int32 controller) override;
-
-	virtual void EventHydraJoystickMoved(int32 controller, FVector2D movement) override;
-	virtual void EventHydraControllerMoved(int32 controller,
-		FVector position, FVector velocity, FVector acceleration,
-		FRotator rotation) override;
 
 	//Define blueprint events
-
 	UFUNCTION(BlueprintImplementableEvent, Category = HydraEvents)
 	void HydraPluggedIn();
 	UFUNCTION(BlueprintImplementableEvent, Category = HydraEvents)
@@ -117,7 +83,7 @@ class AHydraPluginActor : public AActor, public HydraDelegate	//Multiple Inherit
 	UFUNCTION(BlueprintImplementableEvent, Category = HydraEvents)
 	void HydraControllerMoved(int32 controller,
 		FVector position, FVector velocity, FVector acceleration,
-		FRotator rotation);
+		FRotator rotation, FRotator angularVelocity);
 
 
 	//Callable Blueprint functions
@@ -130,14 +96,14 @@ class AHydraPluginActor : public AActor, public HydraDelegate	//Multiple Inherit
 	int32 HydraWhichHand(int32 controller);
 	/** Poll for latest data. Returns false if data is unavailable.*/
 	UFUNCTION(BlueprintCallable, Category = HydraFunctions)
-	bool HydraGetLatestData(int32 controller, FVector& position, FVector& velocity, FVector& acceleration, FRotator& rotation,
+		bool HydraGetLatestData(int32 controller, FVector& position, FVector& velocity, FVector& acceleration, FRotator& rotation, FRotator& angularVelocity,
 							FVector2D& joystick, int32& buttons, float& trigger, bool& docked);
 	/** Poll for historical data. Valid index is 0-9. Returns false if data is unavailable.*/
 	UFUNCTION(BlueprintCallable, Category = HydraFunctions)
-	bool HydraGetHistoricalData(int32 controller, int32 historyIndex, FVector& position, FVector& velocity, FVector& acceleration, FRotator& rotation,
+	bool HydraGetHistoricalData(int32 controller, int32 historyIndex, FVector& position, FVector& velocity, FVector& acceleration, FRotator& rotation, FRotator& angularVelocity,
 		FVector2D& joystick, int32& buttons, float& trigger, bool& docked);
 
-	//Required for delegate to function
+	//Override Initialization and Tick to forward *required* hydra functions.
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 };
