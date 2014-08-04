@@ -81,14 +81,17 @@ When you're ready to ship
 
 ### Shipping Troubleshoot ###
 
-You run your packaged project and you get the following errors:
+You run your packaged project and you get the following errors
+
 **Error:**
+
 ![alt text](http://i.imgur.com/IEIk7Rm.png "No Code Project Error")
 Your project runtime also continues working, but your hydra does not respond.
 
 **Fix:** This means that you have no code added to your project, as of 4.3 your project needs code to run a plugin. Add any code (e.g. new pawn that doesn't do anything extra) and compile to fix.
 
 **Error:**
+
 ![alt text](http://i.imgur.com/j4UAp8t.png "DLL not found Error")
 
 Also you search your log file and find 
