@@ -15,8 +15,6 @@
 IMPLEMENT_MODULE(FHydraPlugin, HydraPlugin)
 
 #define LOCTEXT_NAMESPACE "HydraPlugin"
-#define TO_RADIANS 0.0174532925
-
 
 //Private API - This is where the magic happens
 
@@ -137,14 +135,22 @@ void FHydraPlugin::StartupModule()
 	//try { //Removed because of C4530 (http://msdn.microsoft.com/en-us/library/2axwkyt4.aspx)
 		collector = new DataCollector;
 
-		FString DllFilename = FPaths::ConvertRelativePathToFull(FPaths::Combine(*FPaths::GameDir(),
+		//This is a fixed relative path, meaning this file needs to exist for the plugin to work, even in shipping build!
+		//Todo: automatically copy this file in the packaging process (how?).
+		FString DllFilepath = FPaths::ConvertRelativePathToFull(FPaths::Combine(*FPaths::GameDir(),
 			TEXT("Plugins"), TEXT("HydraPlugin"), TEXT("Binaries/Win64")), TEXT("sixense_x64.dll"));
 
+		//Check if the file exists, if not, give a detailed log entry why
+		if (!FPaths::FileExists(DllFilepath)){
+			UE_LOG(LogClass, Error, TEXT("sixense_x64.dll File is missing (Did you copy Plugins into project root?)! Hydra Unavailable."));
+			return;
+		}
+
 		DLLHandle = NULL;
-		DLLHandle = FPlatformProcess::GetDllHandle(*DllFilename);
+		DLLHandle = FPlatformProcess::GetDllHandle(*DllFilepath);
 		
 		if (!DLLHandle){
-			UE_LOG(LogClass, Error, TEXT("DLL missing, Hydra Unavailable."));
+			UE_LOG(LogClass, Error, TEXT("GetDllHandle failed, Hydra Unavailable."));
 			return;
 		}
 

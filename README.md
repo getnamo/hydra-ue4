@@ -65,10 +65,36 @@ Use, embed, or subclass HydraPluginActor or HydraPlayerController and override f
  4.	Copy HydraDelegate.cpp from the plugin source into your project source and add it your solution. Change top include to "your project name.h"
  5.	Add ```HydraStartup()``` in your ```BeginPlay()``` or other initialization that is executed before the first tick.
  6.	Make your class tickable e.g. ```PrimaryActorTick.bCanEverTick = true;``` in your constructor.
- 7.	Add ```HydraTick(DeltaTime);``` inside ```Tick(float DeltaTime)```
+ 7.	Add ```HydraTick(DeltaTime);``` inside ```Tick(float DeltaTime);```.
  8.	Override any of the delegate methods to receive the events.
 
 See [tutorial video](https://www.youtube.com/watch?v=zRURG4Zp0Zo) for a live example.
+
+## Shipping ##
+
+When you're ready to ship
+
+ 1. As of UE4.3, your project needs code. Even if you're using blueprint only, add code to your project and compile (it doesn't need to do anything).
+ 2. Package your game
+ 3. Copy the 'Plugins' folder in here into your packaged build 'ProjectName' folder. E.g. if I packaged a project called 'HydraTest' in my packaged directory (typically called WindowsNoEditor) find the HydraTest folder and place the Plugins folder there.
+ 4. Confirm its working by launching your packaged game from the 'Binaries' subfolder where you placed your 'Plugins' folder.
+
+### Shipping Troubleshoot ###
+
+You run your packaged project and you get the following errors:
+1. Error: ![alt text](http://i.imgur.com/IEIk7Rm.png "No Code Project Error")
+Your project runtime also continues working, but your hydra does not respond.
+
+Fix: This means that you have no code added to your project, as of 4.3 your project needs code to run a plugin. Add any code (e.g. new pawn that doesn't do anything extra) and compile to fix.
+
+2. 
+Error:
+![alt text](http://i.imgur.com/j4UAp8t.png "DLL not found Error")
+
+Also you search your log file and find 
+![alt text](http://i.imgur.com/jy6nsmX.png "Log of DLL not found Error")
+
+Fix: This error means the sixense dll file is missing. Copy the *Plugins* folder from ShippingBuildOnly into your {packaged root}/{Project Name}
 
 ## Credit ##
 Plugin made by Getnamo. Point all questions to the main discussion thread.
