@@ -82,19 +82,19 @@ When you're ready to ship
 ### Shipping Troubleshoot ###
 
 You run your packaged project and you get the following errors:
-1. Error: ![alt text](http://i.imgur.com/IEIk7Rm.png "No Code Project Error")
+**Error:**
+![alt text](http://i.imgur.com/IEIk7Rm.png "No Code Project Error")
 Your project runtime also continues working, but your hydra does not respond.
 
-Fix: This means that you have no code added to your project, as of 4.3 your project needs code to run a plugin. Add any code (e.g. new pawn that doesn't do anything extra) and compile to fix.
+**Fix:** This means that you have no code added to your project, as of 4.3 your project needs code to run a plugin. Add any code (e.g. new pawn that doesn't do anything extra) and compile to fix.
 
-2. 
-Error:
+**Error:**
 ![alt text](http://i.imgur.com/j4UAp8t.png "DLL not found Error")
 
 Also you search your log file and find 
 ![alt text](http://i.imgur.com/jy6nsmX.png "Log of DLL not found Error")
 
-Fix: This error means the sixense dll file is missing. Copy the *Plugins* folder from ShippingBuildOnly into your {packaged root}/{Project Name}
+**Fix:** This error means the sixense dll file is missing. Copy the *Plugins* folder from ShippingBuildOnly into your *{packaged root}/{Project Name}*
 
 ## Credit ##
 Plugin made by Getnamo. Point all questions to the main discussion thread.
