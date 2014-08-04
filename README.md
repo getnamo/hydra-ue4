@@ -86,6 +86,7 @@ You run your packaged project and you get the following errors
 **Error:**
 
 ![alt text](http://i.imgur.com/IEIk7Rm.png "No Code Project Error")
+
 Your project runtime also continues working, but your hydra does not respond.
 
 **Fix:** This means that you have no code added to your project, as of 4.3 your project needs code to run a plugin. Add any code (e.g. new pawn that doesn't do anything extra) and compile to fix.
