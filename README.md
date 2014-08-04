@@ -8,6 +8,7 @@ The plugin is designed with an event driven architecture through a delegate inte
 The plugin also handles hot plugging and emits HydraPluggedIn (HydraUnplugged for the reverse), allowing you to initialize if needed when the device is ready.
 
 [Main discussion thread](https://forums.unrealengine.com/showthread.php?3505-Razer-Hydra-Plugin)
+[Unreal Engine Wiki](https://wiki.unrealengine.com/Unofficial_Hydra_Plugin)
 
 ## Quick Setup ##
 
