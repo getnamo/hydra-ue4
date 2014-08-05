@@ -18,21 +18,21 @@ The plugin also handles hot plugging and emits HydraPluggedIn (HydraUnplugged fo
  3.	Browse to your project folder (typically found at Documents/Unreal Project/{Your Project Root})
  4.	Copy *Plugins* folder into your Project root.
  5.	Restart the Editor and open your project again.
- 6.	Select Window->Plugins. Click on Installed and you should see a category called Input and a plugin called Hydra Plugin now available. Select Enabled. The Editor will warn you to restart, click restart.
+ 6.	Select Window->Plugins. Click on Installed and you should see a category called Input and a plugin called Hydra Plugin now available. It should be automatically enabled, if not, Select Enabled. The Editor will warn you to restart, click restart.
  7.	When your project has reloaded, the plugin should be enabled and ready to use.
-(Optional) You can confirm it has successfully loaded by opening the Class Viewer, searching "hydra" should show you one actor class added by the plugin calledHydraPluginActor.
+(Optional) You can confirm it has successfully loaded by opening the Class Viewer, searching "hydra" should show you one actor class added by the plugin called HydraPluginActor.
 
 ### Input Mapping ###
 
  1.	For a good example start with a template project.
- 2.	Use the HydraPluginController or the HydraPluginActor (NB the convenience actor needs to be placed and doesn't receive input mapping events but it does forward the input mapping correctly to Engine->Input)
+ 2.	Use the HydraPluginController or the HydraPluginActor (NB the convenience actor needs to be placed)
  3.	Select Edit->Project Settings.
  4.	Select Engine->Input
  5.	Under Action Mappings and Axis Mappings expand the category you wish to add controller movement to. For example if you want to add Forward motion in the standard 3rd person template, click the + sign in MoveForward.
  6.	Change None to the binding you want and adjust the scale to fit. If for example you wanted this to happen when you pitch your left hydra down you would select Hydra Left Rotation Pitch with a scale of say -2.0 to have snappier controls.
  7.	Play and test your scaling adjust as needed.
 
-(Optional) Use key and axis events in any input derived class blueprint (such as controller). Note note that any events you override will cause Engine->Input mapping to stop working for that bind.
+(Optional) Use key and axis events in any input derived class blueprint (such as controller). Note that any events you override will cause Engine->Input mapping to stop working for that bind.
 
 
 ### Events through Blueprint ###
@@ -49,7 +49,7 @@ e.g. If you want to get the position data from your Hydras add the Event Hydra C
 
 Compile and Play to see the position data stream as printed output after you undock your hydra.
 
-Optionally create a blueprint subclass from HydraPlayerControllerand assign it in your game mode. Functionality remains the same.
+Optionally create a blueprint subclass from HydraPlayerController and assign it in your game mode. Functionality remains the same.
 
 See [tutorial video](https://www.youtube.com/watch?v=zRURG4Zp0Zo) for a live example.
 
@@ -64,9 +64,9 @@ Use, embed, or subclass HydraPluginActor or HydraPlayerController and override f
  1.	Include HydraDelegate.h and in your implementation
  2.	Ensure your project has "HydraPlugin" added to your PublicDependencyModuleNames in your *{Project}.build.cs*
  3.	Make your class inherit from HydraDelegate (multiple inheritence)
- 4.	Copy HydraDelegate.cpp from the plugin source into your project source and add it your solution. Change top include to "your project name.h"
+ 4.	Copy HydraDelegate.cpp from the plugin source into your project source and right click on your *{Project}.uproject* and select *Generate Visual Studio project files*. Change top include in the HydraDelegate.cpp to "your project name.h"
  5.	Add ```HydraStartup()``` in your ```BeginPlay()``` or other initialization that is executed before the first tick.
- 6.	Make your class tickable e.g. ```PrimaryActorTick.bCanEverTick = true;``` in your constructor.
+ 6.	Make your class tickable e.g. ```PrimaryActorTick.bCanEverTick = true;``` in your constructor if it isn't by default.
  7.	Add ```HydraTick(DeltaTime);``` inside ```Tick(float DeltaTime);```.
  8.	Override any of the delegate methods to receive the events.
 
@@ -78,8 +78,8 @@ When you're ready to ship
 
  1. As of UE4.3, your project needs code. Even if you're using blueprint only, add code to your project and compile (it doesn't need to do anything).
  2. Package your game
- 3. Copy the slimmed-down 'Plugins' folder found in ShippingBuildOnly into your packaged build 'ProjectName' folder. E.g. if I packaged a project called 'HydraTest' in my packaged directory (typically called WindowsNoEditor) find the HydraTest folder and place the Plugins folder there.
- 4. Confirm its working by launching your packaged game from the 'Binaries' subfolder where you placed your 'Plugins' folder.
+ 3. Copy the slimmed-down *Plugins* folder found in *ShippingBuildOnly* into your packaged build *{ProjectName}* folder. E.g. if I packaged a project called *HydraTest* in my packaged directory (typically called *WindowsNoEditor*) find the *HydraTest* folder and place the Plugins folder there.
+ 4. Confirm its working by launching your packaged game from the *Binaries* subfolder where you placed your *Plugins* folder.
 
 ### Shipping Troubleshoot ###
 
