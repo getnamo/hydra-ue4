@@ -61,7 +61,7 @@ Use, embed, or subclass HydraPluginActor or HydraPlayerController and override f
 
 #### Extend your own Class to Receive Events through C++ ####
 
- 1.	Include HydraDelegate.h and IHydraPlugin.h in your implementation
+ 1.	Include HydraDelegate.h and in your implementation
  2.	Ensure your project has "HydraPlugin" added to your PublicDependencyModuleNames in your *{Project}.build.cs*
  3.	Make your class inherit from HydraDelegate (multiple inheritence)
  4.	Copy HydraDelegate.cpp from the plugin source into your project source and add it your solution. Change top include to "your project name.h"
