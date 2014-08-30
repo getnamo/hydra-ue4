@@ -104,3 +104,5 @@ Also you search your log file and find
 
 ## Credit ##
 Plugin made by Getnamo. Point all questions to the main discussion thread.
+
+The Sixense SDK is licensed under Sixense EULA which can be found here: http://sixense.com/eula
