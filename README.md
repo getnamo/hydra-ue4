@@ -59,27 +59,41 @@ Available since v0.7, this method works by adding a Hydra Component and then sub
 
 ##### Setup #####
 <ol>
-<li> Open the blueprint you wish to receive hydra events.
-<li> Add the Hydra Component to your blueprint through method 3 or 4.
-<li> (Option 1) Add component directly
+<li> Open the blueprint you wish to receive hydra events.</li>
+<li> Add the Hydra Component to your blueprint through method 3 or 4.</li>
+<li> (Option 1) Add component directly</li>
+
 <img src="http://i.imgur.com/04uZ62p.png">
-<li> (Option 2) Add component through event graph
+
+<li> (Option 2) Add component through event graph</li>
+
 <img src="http://i.imgur.com/We6ATck.png">
-<li> To receive events we now have to add an interface. Click on Blueprint Props and under Details find 'Add' under interfaces. Add the HydraInterface.
+
+<li> To receive events we now have to add an interface. Click on Blueprint Props and under Details find 'Add' under interfaces. Add the HydraInterface.</li>
+
 <img src="http://i.imgur.com/QgrcTgi.png">
+
 </ol>
 
 ##### How to Use
 
 <ol>
-<li>You can get any of the HydraInterface events by right clicking on the event graph and typing 'Hydra events'
+<li>You can get any of the HydraInterface events by right clicking on the event graph and typing 'Hydra events'</li>
+
 <img src="http://i.imgur.com/7348GgZ.png">
-<li>An event will emit when the action occurs, giving all relevant data in context as pins in the node. You can filter the events by hand using Is x Hand function on the controller output.
+
+<li>An event will emit when the action occurs, giving all relevant data in context as pins in the node. You can filter the events by hand using Is x Hand function on the controller output.</li>
+
 <img src="http://i.imgur.com/6EuRcBN.png">
-<li>The controller pointer is emitted for every relevant event, allowing you to conveniently access other variables you may be interested in that context. This removes the need to poll for most cases.
+
+<li>The controller pointer is emitted for every relevant event, allowing you to conveniently access other variables you may be interested in that context. This removes the need to poll for most cases.</li>
+
 <img src="http://i.imgur.com/Xp861nw.png">
-<li> If you need to access past frames you can do so by querying your HydraComponent. The plugin stores the last 10 frames for use i.e. gesture recognition. The controllerId refers to each single controller, 0 or 1 is a valid input. You can also manually check if your hydra is available. Should the state change it will also emit an event, the plugin supports hot plugging.
+
+<li> If you need to access past frames you can do so by querying your HydraComponent. The plugin stores the last 10 frames for use i.e. gesture recognition. The controllerId refers to each single controller, 0 or 1 is a valid input. You can also manually check if your hydra is available. Should the state change it will also emit an event, the plugin supports hot plugging.</li>
+
 <img src="http://i.imgur.com/IopRDKg.png">
+
 </ol>
 
 
