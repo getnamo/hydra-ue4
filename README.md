@@ -35,7 +35,7 @@ The plugin also handles hot plugging and emits HydraPluggedIn (HydraUnplugged fo
 (Optional) Use key and axis events in any input derived class blueprint (such as controller). Note that any events you override will cause Engine->Input mapping to stop working for that bind.
 
 
-### Events through Blueprint ###
+### Events through Blueprint - Convenience Classes ###
 
  1.	Select Window->Class Viewer.
  2.	Search for "HydraPluginActor"
@@ -52,6 +52,36 @@ Compile and Play to see the position data stream as printed output after you und
 Optionally create a blueprint subclass from HydraPlayerController and assign it in your game mode. Functionality remains the same.
 
 See [tutorial video](https://www.youtube.com/watch?v=zRURG4Zp0Zo) for a live example.
+
+### Events through Blueprint - Subclass  any Blueprint ###
+
+Available since v0.7, this method works by adding a Hydra Component and then subscribing to the events through a HydraInterface.
+
+##### Setup #####
+<ol>
+<li> Open the blueprint you wish to receive hydra events.
+<li> Add the Hydra Component to your blueprint through method 3 or 4.
+<li> (Option 1) Add component directly
+<img src="http://i.imgur.com/04uZ62p.png">
+<li> (Option 2) Add component through event graph
+<img src="http://i.imgur.com/We6ATck.png">
+<li> To receive events we now have to add an interface. Click on Blueprint Props and under Details find 'Add' under interfaces. Add the HydraInterface.
+<img src="http://i.imgur.com/QgrcTgi.png">
+</ol>
+
+##### How to Use
+
+<ol>
+<li>You can get any of the HydraInterface events by right clicking on the event graph and typing 'Hydra events'
+<img src="http://i.imgur.com/7348GgZ.png">
+<li>An event will emit when the action occurs, giving all relevant data in context as pins in the node. You can filter the events by hand using Is x Hand function on the controller output.
+<img src="http://i.imgur.com/6EuRcBN.png">
+<li>The controller pointer is emitted for every relevant event, allowing you to conveniently access other variables you may be interested in that context. This removes the need to poll for most cases.
+<img src="http://i.imgur.com/Xp861nw.png">
+<li> If you need to access past frames you can do so by querying your HydraComponent. The plugin stores the last 10 frames for use i.e. gesture recognition. The controllerId refers to each single controller, 0 or 1 is a valid input. You can also manually check if your hydra is available. Should the state change it will also emit an event, the plugin supports hot plugging.
+<img src="http://i.imgur.com/IopRDKg.png">
+</ol>
+
 
 ### Events through C++ ###
 
