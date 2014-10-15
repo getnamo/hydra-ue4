@@ -12,24 +12,21 @@ AHydraPluginActor::AHydraPluginActor(const FPostConstructInitializeProperties& P
 	PrimaryActorTick.bCanEverTick = true;
 }
 
-//Override Callable Functions - Required to forward their implementations in order to compile, cannot skip implementation as we can for events.
-bool AHydraPluginActor::HydraIsAvailable()
+//Blueprint exposing the HydraDelegate Methods
+//Override Callable Functions - Required to forward their implementations in order to compile, cannot skip implementation or bp definition
+bool AHydraPluginActor::IsAvailable()
 {
-	return HydraDelegate::HydraIsAvailable();
+	return HydraBlueprintDelegate::HydraIsAvailable();
 }
-int32 AHydraPluginActor::HydraWhichHand(int32 controller)
+
+UHydraSingleController* AHydraPluginActor::GetHistoricalFrames(int32 controllerId, int32 historyIndex)
 {
-	return HydraDelegate::HydraWhichHand(controller);
+	return HydraBlueprintDelegate::HydraGetHistoricalFrames(controllerId, historyIndex);
 }
-bool AHydraPluginActor::HydraGetLatestData(int32 controller, FVector& position, FVector& velocity, FVector& acceleration, FRotator& rotation, FRotator& angularVelocity,
-	FVector2D& joystick, int32& buttons, float& trigger, bool& docked)
+
+UHydraSingleController* AHydraPluginActor::GetLatestFrame(int32 controllerId)
 {
-	return HydraDelegate::HydraGetLatestData(controller, position, velocity, acceleration, rotation, angularVelocity, joystick, buttons, trigger, docked);
-}
-bool AHydraPluginActor::HydraGetHistoricalData(int32 controller, int32 historyIndex, FVector& position, FVector& velocity, FVector& acceleration, FRotator& rotation, FRotator& angularVelocity,
-	FVector2D& joystick, int32& buttons, float& trigger, bool& docked)
-{
-	return HydraDelegate::HydraGetHistoricalData(controller, historyIndex, position, velocity, acceleration, rotation, angularVelocity, joystick, buttons, trigger, docked);
+	return HydraBlueprintDelegate::HydraGetHistoricalFrames(controllerId, 0);
 }
 
 //Required Overrides
@@ -42,6 +39,7 @@ void AHydraPluginActor::BeginPlay()
 	EnableInput(PC);
 
 	//Required Hydra Initialization
+	ValidSelfPointer = this;	//required from v0.7
 	HydraStartup();
 }
 

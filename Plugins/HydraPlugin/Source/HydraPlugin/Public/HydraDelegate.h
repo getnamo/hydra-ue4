@@ -1,5 +1,16 @@
 #pragma once
 
+#include "HydraDelegate.generated.h"
+
+#define MAX_CONTROLLERS_SUPPORTED 2
+
+UENUM(BlueprintType)
+enum HydraControllerHand
+{
+	HYDRA_LEFT_HAND = 1,
+	HYDRA_RIGHT_HAND
+};
+
 //Input Mapping Keys
 struct EKeysHydra
 {
@@ -135,13 +146,11 @@ public:
 
 	//** Callable Functions (for public polling support) */
 	virtual bool HydraIsAvailable();
-	virtual int32 HydraWhichHand(int32 controller);	//call to determine which hand the controller is held in. Determined and reset on controller docking.
-	virtual bool HydraGetLatestData(int32 controller, FVector& position, FVector& velocity, FVector& acceleration, FRotator& rotation, FRotator& angularVelocity,
-		FVector2D& joystick, int32& buttons, float& trigger, bool& docked);
-	virtual bool HydraGetHistoricalData(int32 controller, int32 historyIndex, FVector& position, FVector& velocity, FVector& acceleration, FRotator& rotation, FRotator& angularVelocity,
-		FVector2D& joystick, int32& buttons, float& trigger, bool& docked);
+	virtual HydraControllerHand HydraWhichHand(int32 controllerId);	//call to determine which hand the controller is held in. Determined and reset on controller docking.
+	virtual sixenseControllerDataUE* HydraGetLatestData(int32 controllerId);
+	virtual sixenseControllerDataUE* HydraGetHistoricalData(int32 controllerId, int32 historyIndex);
 
 	//** Required Calls */
-	void HydraStartup();				//Call this somewhere in an initializing state such as BeginPlay()
-	void HydraTick(float DeltaTime);	//Call this every tick
+	virtual void HydraStartup();				//Call this somewhere in an initializing state such as BeginPlay()
+	virtual void HydraTick(float DeltaTime);	//Call this every tick
 };

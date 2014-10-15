@@ -11,30 +11,28 @@ AHydraPlayerController::AHydraPlayerController(const class FPostConstructInitial
 	PrimaryActorTick.bCanEverTick = true;
 }
 
-//Override Callable Functions - Required to forward their implementations in order to compile, cannot skip implementation as we can for events.
-bool AHydraPlayerController::HydraIsAvailable()
+//Blueprint exposing the HydraDelegate Methods
+//Override Callable Functions - Required to forward their implementations in order to compile, cannot skip implementation or bp definition
+bool AHydraPlayerController::IsAvailable()
 {
-	return HydraDelegate::HydraIsAvailable();
+	return HydraBlueprintDelegate::HydraIsAvailable();
 }
-int32 AHydraPlayerController::HydraWhichHand(int32 controller)
+
+UHydraSingleController* AHydraPlayerController::GetHistoricalFrames(int32 controllerId, int32 historyIndex)
 {
-	return HydraDelegate::HydraWhichHand(controller);
+	return HydraBlueprintDelegate::HydraGetHistoricalFrames(controllerId, historyIndex);
 }
-bool AHydraPlayerController::HydraGetLatestData(int32 controller, FVector& position, FVector& velocity, FVector& acceleration, FRotator& rotation, FRotator& angularVelocity,
-	FVector2D& joystick, int32& buttons, float& trigger, bool& docked)
+
+UHydraSingleController* AHydraPlayerController::GetLatestFrame(int32 controllerId)
 {
-	return HydraDelegate::HydraGetLatestData(controller, position, velocity, acceleration, rotation, angularVelocity, joystick, buttons, trigger, docked);
-}
-bool AHydraPlayerController::HydraGetHistoricalData(int32 controller, int32 historyIndex, FVector& position, FVector& velocity, FVector& acceleration, FRotator& rotation, FRotator& angularVelocity,
-	FVector2D& joystick, int32& buttons, float& trigger, bool& docked)
-{
-	return HydraDelegate::HydraGetHistoricalData(controller, historyIndex, position, velocity, acceleration, rotation, angularVelocity, joystick, buttons, trigger, docked);
+	return HydraBlueprintDelegate::HydraGetHistoricalFrames(controllerId, 0);
 }
 
 //Required Overrides, forward startup and tick.
 void AHydraPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
+	ValidSelfPointer = this;	//required from v0.7
 	HydraStartup();
 }
 

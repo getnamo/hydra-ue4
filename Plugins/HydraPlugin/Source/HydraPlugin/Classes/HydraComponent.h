@@ -1,16 +1,15 @@
 #pragma once
 
-#include "GameFramework/PlayerController.h"
+#include "HydraPluginPrivatePCH.h"
 #include "HydraBlueprintDelegate.h"
-#include "HydraPlayerController.generated.h"
+#include "HydraComponent.generated.h"
 
-/**
- * 
- */
-UCLASS()
-class AHydraPlayerController : public APlayerController, public HydraBlueprintDelegate, public IHydraInterface
+UCLASS(ClassGroup="Input Controller", meta=(BlueprintSpawnableComponent))
+class UHydraComponent : public UActorComponent, public HydraBlueprintDelegate
 {
 	GENERATED_UCLASS_BODY()
+
+public:
 
 	//Callable Blueprint functions - Need to be defined for direct access
 	/** Check if the hydra is available/plugged in.*/
@@ -25,7 +24,6 @@ class AHydraPlayerController : public APlayerController, public HydraBlueprintDe
 	UFUNCTION(BlueprintCallable, Category = HydraFunctions)
 	UHydraSingleController* GetLatestFrame(int32 controllerId);
 
-	//Override Initialization and Tick to forward *required* hydra functions.
-	virtual void BeginPlay() override;
-	virtual void Tick(float DeltaTime) override;
+	virtual void OnRegister() override;
+	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
 };

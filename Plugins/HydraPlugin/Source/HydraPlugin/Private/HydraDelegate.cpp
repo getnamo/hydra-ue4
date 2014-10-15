@@ -85,39 +85,33 @@ bool HydraDelegate::HydraIsAvailable()
 }
 
 /** Call to determine which hand you're holding the controller in. Determine by last docking position.*/
-int32 HydraDelegate::HydraWhichHand(int32 controller)
+HydraControllerHand HydraDelegate::HydraWhichHand(int32 controller)
 {
-	return HydraLatestData->controllers[controller].which_hand;
+	return (HydraControllerHand)HydraLatestData->controllers[controller].which_hand;
 }
 
 /** Poll for latest data.*/
-bool HydraDelegate::HydraGetLatestData(int32 controller, FVector& position, FVector& velocity, FVector& acceleration, FRotator& rotation, FRotator& angularVelocity,
-	FVector2D& joystick, int32& buttons, float& trigger, bool& docked)
-{
-	if (controller > 4 || controller < 0){ return false; }
 
-	return HydraGetHistoricalData(controller, 0, position, velocity, acceleration, rotation, angularVelocity ,joystick, buttons, trigger, docked);
+sixenseControllerDataUE* HydraDelegate::HydraGetLatestData(int32 controllerId)
+{
+	if ((controllerId > MAX_CONTROLLERS_SUPPORTED) || (controllerId < 0))
+	{
+		return NULL; 
+	}
+	return HydraGetHistoricalData(controllerId, 0);
 }
 
 /** Poll for historical data. Valid index is 0-9 */
-bool HydraDelegate::HydraGetHistoricalData(int32 controller, int32 historyIndex, FVector& position, FVector& velocity, FVector& acceleration, FRotator& rotation, FRotator& angularVelocity,
-	FVector2D& joystick, int32& buttons, float& trigger, bool& docked)
+sixenseControllerDataUE* HydraDelegate::HydraGetHistoricalData(int32 controllerId, int32 historyIndex)
 {
-	if (historyIndex<0 || historyIndex>9){ return false; }
-	if (controller > 4 || controller < 0){ return false; }
+	if ((historyIndex<0) || (historyIndex>9) || (controllerId > MAX_CONTROLLERS_SUPPORTED) || (controllerId < 0))
+	{
+		return NULL;
+	}
+	sixenseControllerDataUE* data;
+	data = &HydraHistoryData[historyIndex].controllers[controllerId];
 
-	sixenseControllerDataUE* data = &HydraHistoryData[historyIndex].controllers[controller];
-
-	position = data->position;
-	velocity = data->velocity;
-	acceleration = data->acceleration;
-	rotation = data->rotation;
-	angularVelocity = data->angular_velocity;
-	joystick = data->joystick;
-	buttons = data->buttons;
-	trigger = data->trigger;
-	docked = data->is_docked;
-	return data->enabled;
+	return data;
 }
 
 void HydraDelegate::HydraStartup()

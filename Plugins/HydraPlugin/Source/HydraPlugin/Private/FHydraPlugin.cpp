@@ -4,6 +4,7 @@
 
 #include "FHydraPlugin.h"
 #include "HydraDelegate.h"
+#include "HydraSingleController.h"
 #include "Slate.h"
 
 #include <iostream>
@@ -73,7 +74,7 @@ public:
 	{
 		allDataUE->enabledCount = 0;
 
-		for (int i = 0; i < 4; i++)
+		for (int i = 0; i < MAX_CONTROLLERS_SUPPORTED; i++)
 		{
 			allDataUE->controllers[i] = ConvertData(&allData->controllers[i]);
 			if (allDataUE->controllers[i].enabled){
@@ -285,7 +286,7 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 	bool plugNotChecked = true;
 
 	//Trigger any delegate events
-	for (int i = 0; i < 4; i++)
+	for (int i = 0; i < MAX_CONTROLLERS_SUPPORTED; i++)
 	{
 		controller = &hydraDelegate->HydraLatestData->controllers[i];
 		previous = &hydraDelegate->HydraHistoryData[0].controllers[i];
@@ -535,6 +536,9 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraRightJoystickX, 0, controller->joystick.X);
 					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraRightJoystickY, 0, controller->joystick.Y);
 				}
+
+				//axis test
+				//FSlateApplication::Get().on
 			}
 
 			//Controller
