@@ -16,7 +16,7 @@ The plugin also handles hot plugging and emits HydraPluggedIn (HydraUnplugged fo
  1.	Download 
  2.	Create new or choose project.
  3.	Browse to your project folder (typically found at Documents/Unreal Project/{Your Project Root})
- 4.	Copy *Plugins* folder into your Project root.
+ 4.	Copy *Plugins* and *Binaries* folders into your Project root.
  5.	Restart the Editor and open your project again.
  6.	Select Window->Plugins. Click on Installed and you should see a category called Input and a plugin called Hydra Plugin now available. It should be automatically enabled, if not, Select Enabled. The Editor will warn you to restart, click restart.
  7.	When your project has reloaded, the plugin should be enabled and ready to use.
@@ -120,10 +120,10 @@ See [tutorial video](https://www.youtube.com/watch?v=zRURG4Zp0Zo) for a live exa
 
 When you're ready to ship
 
- 1. As of UE4.3, your project needs code. Even if you're using blueprint only, add code to your project and compile (it doesn't need to do anything).
+ 1. As of UE4.5, your project needs code. Even if you're using blueprint only, add code to your project and compile (it doesn't need to do anything).
  2. Package your game
- 3. Copy the slimmed-down *Plugins* folder found in *ShippingBuildOnly* into your packaged build *{ProjectName}* folder. E.g. if I packaged a project called *HydraTest* in my packaged directory (typically called *WindowsNoEditor*) find the *HydraTest* folder and place the Plugins folder there.
- 4. Confirm its working by launching your packaged game from the *Binaries* subfolder where you placed your *Plugins* folder.
+ 3. Copy only the *Binaries* folder into your packaged build *{ProjectName}* folder. E.g. if I packaged a project called *HydraTest* in my packaged directory (typically called *WindowsNoEditor*) find the *HydraTest* folder and place the Plugins folder there.
+ 4. Confirm that it's working by launching your packaged game executable from the *Binaries* subfolder.
 
 ### Shipping Troubleshoot ###
 
@@ -135,7 +135,7 @@ You run your packaged project and you get the following errors
 
 Your project runtime also continues working, but your hydra does not respond.
 
-**Fix:** This means that you have no code added to your project, as of 4.3 your project needs code to run a plugin. Add any code (e.g. new pawn that doesn't do anything extra) and compile to fix.
+**Fix:** This means that you have no code added to your project, the project needs code to run a plugin. Add any code (e.g. new pawn that doesn't do anything extra) and compile to fix.
 
 **Error:**
 
