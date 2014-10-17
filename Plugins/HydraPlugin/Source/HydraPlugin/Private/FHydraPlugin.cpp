@@ -97,12 +97,32 @@ void FHydraPlugin::StartupModule()
 
 		//This is a fixed relative path, meaning this file needs to exist for the plugin to work, even in shipping build!
 		//Todo: automatically copy this file in the packaging process (how?).
-		FString DllFilepath = FPaths::ConvertRelativePathToFull(FPaths::Combine(*FPaths::GameDir(),
-			TEXT("Plugins"), TEXT("HydraPlugin"), TEXT("Binaries/Win64")), TEXT("sixense_x64.dll"));
+		//FString DllFilepath = FPaths::ConvertRelativePathToFull(FPaths::Combine(*FPaths::GameDir(),
+		//	TEXT("Plugins"), TEXT("HydraPlugin"), TEXT("Binaries/Win64")), TEXT("sixense_x64.dll"));
+
+		//Define Paths for direct dll bind
+		FString BinariesRoot = FPaths::Combine(*FPaths::GameDir(), TEXT("Binaries"));
+		FString PlatformString;
+		FString SixenseDLLString;
+		
+#if PLATFORM_WINDOWS
+#if _WIN64
+		//64bit
+		SixenseDLLString = FString(TEXT("sixense_x64.dll"));
+		PlatformString = FString(TEXT("Win64"));
+#else
+		//32bit
+		SixenseDLLString = FString(TEXT("sixense.dll"));
+		PlatformString = FString(TEXT("Win32"));
+#endif
+#else
+		UE_LOG(LogClass, Error, TEXT("Unsupported Platform. Hydra Unavailable."));
+#endif
+		FString DllFilepath = FPaths::ConvertRelativePathToFull(FPaths::Combine(*BinariesRoot, *PlatformString, *SixenseDLLString));
 
 		//Check if the file exists, if not, give a detailed log entry why
 		if (!FPaths::FileExists(DllFilepath)){
-			UE_LOG(LogClass, Error, TEXT("sixense_x64.dll File is missing (Did you copy Plugins into project root?)! Hydra Unavailable."));
+			UE_LOG(LogClass, Error, TEXT("%s File is missing (Did you copy Binaries into project root?)! Hydra Unavailable."), *SixenseDLLString);
 			return;
 		}
 
@@ -111,6 +131,7 @@ void FHydraPlugin::StartupModule()
 		
 		if (!DLLHandle){
 			UE_LOG(LogClass, Error, TEXT("GetDllHandle failed, Hydra Unavailable."));
+			UE_LOG(LogClass, Error, TEXT("Full path debug: %s."), *DllFilepath);
 			return;
 		}
 

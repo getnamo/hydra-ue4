@@ -73,6 +73,7 @@ namespace UnrealBuildTool.Rules
                 string PlatformString = (Target.Platform == UnrealTargetPlatform.Win64) ? "x64" : "x32";
                 string LibrariesPath = Path.Combine(ThirdPartyPath, "Sixense", "Lib");
 
+                //Lib based bind unsupported due to sixense wrong lib version compile, limiting platforms to windows 32/64
                 //PublicAdditionalLibraries.Add(Path.Combine(LibrariesPath, "sixense_s_" + PlatformString + ".lib"));
             }
 
