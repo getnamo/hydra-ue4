@@ -1,6 +1,5 @@
 ## Overview ##
 
-
 An Unofficial Razer Hydra Plugin for the Unreal Engine 4
 
 The plugin is designed with an event driven architecture through a delegate interface. You can access device events through Blueprintable classes provided or through C++. Main C++ support is from inheriting the HydraDelegate, through it you can extend your own custom class to support Hydra events. Additional functions in the delegate support polling for latest data.
@@ -144,9 +143,18 @@ Your project runtime also continues working, but your hydra does not respond.
 Also you search your log file and find 
 ![alt text](http://i.imgur.com/jy6nsmX.png "Log of DLL not found Error")
 
-**Fix:** This error means the sixense dll file is missing. Copy the *Plugins* folder from ShippingBuildOnly into your *{packaged root}/{Project Name}*
+**Fix:** This error means the sixense dll file is missing. Copy the *Binaries* folder from the plugin into your *{packaged root}/{Project Name}*
 
-## Credit ##
+## Credit and License##
 Plugin made by Getnamo. Point all questions to the main discussion thread.
 
-The Sixense SDK is licensed under Sixense EULA which can be found here: http://sixense.com/eula
+<p xmlns:dct="http://purl.org/dc/terms/">
+<a rel="license" href="http://creativecommons.org/publicdomain/mark/1.0/">
+<img src="http://i.creativecommons.org/p/mark/1.0/88x31.png"
+     style="border-style: none;" alt="Public Domain Mark" />
+</a>
+<br />
+Anything not covered by Sixense EULA in <span property="dct:title">Hydra UE4 Plugin</span> is free of known copyright restrictions.
+</p>
+
+The Sixense SDK is licensed under [Sixense EULA](http://sixense.com/eula).
