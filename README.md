@@ -1,4 +1,4 @@
-## Overview ##
+myo-ue4## Overview ##
 
 An Unofficial Razer Hydra Plugin for the Unreal Engine 4
 
@@ -148,13 +148,11 @@ Also you search your log file and find
 ## Credit and License##
 Plugin made by Getnamo. Point all questions to the main discussion thread.
 
-<p xmlns:dct="http://purl.org/dc/terms/">
+The Sixense SDK is licensed under [Sixense EULA](http://sixense.com/eula).
+
 <a rel="license" href="http://creativecommons.org/publicdomain/mark/1.0/">
 <img src="http://i.creativecommons.org/p/mark/1.0/88x31.png"
      style="border-style: none;" alt="Public Domain Mark" />
 </a>
 <br />
-Anything not covered by Sixense EULA in <span property="dct:title">Hydra UE4 Plugin</span> is free of known copyright restrictions.
-</p>
-
-The Sixense SDK is licensed under [Sixense EULA](http://sixense.com/eula).
+Anything not covered by Sixense EULA and [Unreal Engine EULA](https://www.unrealengine.com/eula) in <span property="dct:title">Hydra UE4 Plugin</span> is free of known copyright restrictions.
