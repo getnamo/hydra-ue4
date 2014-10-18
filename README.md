@@ -1,4 +1,4 @@
-myo-ue4## Overview ##
+## Overview ##
 
 An Unofficial Razer Hydra Plugin for the Unreal Engine 4
 
