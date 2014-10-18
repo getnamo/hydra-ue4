@@ -1,119 +1,138 @@
 #include "HydraPluginPrivatePCH.h"
 #include "HydraBlueprintDelegate.h"
 
-//DefaultPCIP
-/*HydraBlueprintDelegate::HydraBlueprintDelegate(const FPostConstructInitializeProperties& PCIP)
-	: Super(PCIP)
-{
-	PrimaryActorTick.bCanEverTick = true;
-}*/
-
 //Event forwarding to interface
 void HydraBlueprintDelegate::HydraPluggedIn()
 {
-	IHydraInterface::Execute_HydraPluggedIn(_interfaceDelegate);
+	if (implementsInterface())
+		IHydraInterface::Execute_HydraPluggedIn(_interfaceDelegate);
 }
 void HydraBlueprintDelegate::HydraUnplugged()
 {
-	IHydraInterface::Execute_HydraUnplugged(_interfaceDelegate);
+	if (implementsInterface())
+		IHydraInterface::Execute_HydraUnplugged(_interfaceDelegate);
 }
 void HydraBlueprintDelegate::HydraControllerEnabled(int32 controller)
 {
-	IHydraInterface::Execute_HydraControllerEnabled(_interfaceDelegate, _latestFrame[controller]);
+	if (implementsInterface())
+		IHydraInterface::Execute_HydraControllerEnabled(_interfaceDelegate, _latestFrame[controller]);
 }
 void HydraBlueprintDelegate::HydraControllerDisabled(int32 controller)
 {
-	IHydraInterface::Execute_HydraControllerDisabled(_interfaceDelegate, _latestFrame[controller]);
+	if (implementsInterface())
+		IHydraInterface::Execute_HydraControllerDisabled(_interfaceDelegate, _latestFrame[controller]);
 }
 void HydraBlueprintDelegate::HydraDocked(int32 controller)
 {
-	IHydraInterface::Execute_HydraDocked(_interfaceDelegate, _latestFrame[controller]);
+	if (implementsInterface())
+		IHydraInterface::Execute_HydraDocked(_interfaceDelegate, _latestFrame[controller]);
 }
 void HydraBlueprintDelegate::HydraUndocked(int32 controller)
 {
-	IHydraInterface::Execute_HydraUndocked(_interfaceDelegate, _latestFrame[controller]);
+	if (implementsInterface())
+		IHydraInterface::Execute_HydraUndocked(_interfaceDelegate, _latestFrame[controller]);
 }
 void HydraBlueprintDelegate::HydraAnyButtonPressed(int32 controller)
 {
-	IHydraInterface::Execute_HydraAnyButtonPressed(_interfaceDelegate, _latestFrame[controller]);
+	if (implementsInterface())
+		IHydraInterface::Execute_HydraAnyButtonPressed(_interfaceDelegate, _latestFrame[controller]);
 }
 void HydraBlueprintDelegate::HydraB1Pressed(int32 controller)
 {
-	IHydraInterface::Execute_HydraB1Pressed(_interfaceDelegate, _latestFrame[controller]);
+	if (implementsInterface())
+		IHydraInterface::Execute_HydraB1Pressed(_interfaceDelegate, _latestFrame[controller]);
 }
 void HydraBlueprintDelegate::HydraB1Released(int32 controller)
 {
-	IHydraInterface::Execute_HydraB1Released(_interfaceDelegate, _latestFrame[controller]);
+	if (implementsInterface())
+		IHydraInterface::Execute_HydraB1Released(_interfaceDelegate, _latestFrame[controller]);
 }
 void HydraBlueprintDelegate::HydraB2Pressed(int32 controller)
 {
-	IHydraInterface::Execute_HydraB2Pressed(_interfaceDelegate, _latestFrame[controller]);
+	if (implementsInterface())
+		IHydraInterface::Execute_HydraB2Pressed(_interfaceDelegate, _latestFrame[controller]);
 }
 void HydraBlueprintDelegate::HydraB2Released(int32 controller)
 {
-	IHydraInterface::Execute_HydraB2Released(_interfaceDelegate, _latestFrame[controller]);
+	if (implementsInterface())
+		IHydraInterface::Execute_HydraB2Released(_interfaceDelegate, _latestFrame[controller]);
 }
 void HydraBlueprintDelegate::HydraB3Pressed(int32 controller)
 {
-	IHydraInterface::Execute_HydraB3Pressed(_interfaceDelegate, _latestFrame[controller]);
+	if (implementsInterface())
+		IHydraInterface::Execute_HydraB3Pressed(_interfaceDelegate, _latestFrame[controller]);
 }
 void HydraBlueprintDelegate::HydraB3Released(int32 controller)
 {
-	IHydraInterface::Execute_HydraB3Released(_interfaceDelegate, _latestFrame[controller]);
+	if (implementsInterface())
+		IHydraInterface::Execute_HydraB3Released(_interfaceDelegate, _latestFrame[controller]);
 }
 void HydraBlueprintDelegate::HydraB4Pressed(int32 controller)
 {
-	IHydraInterface::Execute_HydraB4Pressed(_interfaceDelegate, _latestFrame[controller]);
+	if (implementsInterface())
+		IHydraInterface::Execute_HydraB4Pressed(_interfaceDelegate, _latestFrame[controller]);
 }
 void HydraBlueprintDelegate::HydraB4Released(int32 controller)
 {
-	IHydraInterface::Execute_HydraB4Released(_interfaceDelegate, _latestFrame[controller]);
+	if (implementsInterface())
+		IHydraInterface::Execute_HydraB4Released(_interfaceDelegate, _latestFrame[controller]);
 }
 void HydraBlueprintDelegate::HydraTriggerPressed(int32 controller)
 {
-	IHydraInterface::Execute_HydraTriggerPressed(_interfaceDelegate, _latestFrame[controller]);
+	if (implementsInterface())
+		IHydraInterface::Execute_HydraTriggerPressed(_interfaceDelegate, _latestFrame[controller]);
 }
 void HydraBlueprintDelegate::HydraTriggerReleased(int32 controller)
 {
-	IHydraInterface::Execute_HydraTriggerReleased(_interfaceDelegate, _latestFrame[controller]);
+	if (implementsInterface())
+		IHydraInterface::Execute_HydraTriggerReleased(_interfaceDelegate, _latestFrame[controller]);
 }
 void HydraBlueprintDelegate::HydraTriggerChanged(int32 controller, float value)
 {
-	IHydraInterface::Execute_HydraTriggerChanged(_interfaceDelegate, _latestFrame[controller], value);
+	if (implementsInterface())
+		IHydraInterface::Execute_HydraTriggerChanged(_interfaceDelegate, _latestFrame[controller], value);
 }
 void HydraBlueprintDelegate::HydraBumperPressed(int32 controller)
 {
-	IHydraInterface::Execute_HydraBumperPressed(_interfaceDelegate, _latestFrame[controller]);
+	if (implementsInterface())
+		IHydraInterface::Execute_HydraBumperPressed(_interfaceDelegate, _latestFrame[controller]);
 }
 void HydraBlueprintDelegate::HydraBumperReleased(int32 controller)
 {
-	IHydraInterface::Execute_HydraBumperReleased(_interfaceDelegate, _latestFrame[controller]);
+	if (implementsInterface())
+		IHydraInterface::Execute_HydraBumperReleased(_interfaceDelegate, _latestFrame[controller]);
 }
 void HydraBlueprintDelegate::HydraJoystickPressed(int32 controller)
 {
-	IHydraInterface::Execute_HydraJoystickPressed(_interfaceDelegate, _latestFrame[controller]);
+	if (implementsInterface())
+		IHydraInterface::Execute_HydraJoystickPressed(_interfaceDelegate, _latestFrame[controller]);
 }
 void HydraBlueprintDelegate::HydraJoystickReleased(int32 controller)
 {
-	IHydraInterface::Execute_HydraJoystickReleased(_interfaceDelegate, _latestFrame[controller]);
+	if (implementsInterface())
+		IHydraInterface::Execute_HydraJoystickReleased(_interfaceDelegate, _latestFrame[controller]);
 }
 void HydraBlueprintDelegate::HydraStartPressed(int32 controller)
 {
-	IHydraInterface::Execute_HydraStartPressed(_interfaceDelegate, _latestFrame[controller]);
+	if (implementsInterface())
+		IHydraInterface::Execute_HydraStartPressed(_interfaceDelegate, _latestFrame[controller]);
 }
 void HydraBlueprintDelegate::HydraStartReleased(int32 controller)
 {
-	IHydraInterface::Execute_HydraStartReleased(_interfaceDelegate, _latestFrame[controller]);
+	if (implementsInterface())
+		IHydraInterface::Execute_HydraStartReleased(_interfaceDelegate, _latestFrame[controller]);
 }
 void HydraBlueprintDelegate::HydraJoystickMoved(int32 controller, FVector2D movement)
 {
-	IHydraInterface::Execute_HydraJoystickMoved(_interfaceDelegate, _latestFrame[controller], movement);
+	if (implementsInterface())
+		IHydraInterface::Execute_HydraJoystickMoved(_interfaceDelegate, _latestFrame[controller], movement);
 }
 void HydraBlueprintDelegate::HydraControllerMoved(int32 controller,
 	FVector position, FVector velocity, FVector acceleration,
 	FRotator rotation, FRotator angularVelocity)
 {
-	IHydraInterface::Execute_HydraControllerMoved(_interfaceDelegate, _latestFrame[controller], position, velocity, acceleration, rotation, angularVelocity);
+	if (implementsInterface())
+		IHydraInterface::Execute_HydraControllerMoved(_interfaceDelegate, _latestFrame[controller], position, velocity, acceleration, rotation, angularVelocity);
 }
 
 //Blueprint exposing the HydraDelegate Methods
@@ -138,6 +157,10 @@ UHydraSingleController* HydraBlueprintDelegate::HydraGetLatestFrame(int32 contro
 	return HydraGetHistoricalFrames(controllerId, 0);
 }
 
+bool HydraBlueprintDelegate::implementsInterface()
+{
+	return (_interfaceDelegate != NULL && _interfaceDelegate->GetClass()->ImplementsInterface(UHydraInterface::StaticClass()));
+}
 
 //Setting
 void HydraBlueprintDelegate::SetInterfaceDelegate(UObject* newDelegate)
@@ -160,11 +183,12 @@ void HydraBlueprintDelegate::SetInterfaceDelegate(UObject* newDelegate)
 		{
 			//If you're crashing its probably because of this setting causing an assert failure
 			_interfaceDelegate = NULL;
+			UE_LOG(LogClass, Log, TEXT("HydraBlueprintDelegate Warning: HydraInterface delegate is NULL, did your class implement HydraInterface? Events are disabled."));
 		}
 
 		//Either way post a warning, this will be a common error
-		UE_LOG(LogClass, Log, TEXT("HydraBlueprintDelegate Warning: Delegate is NOT set, did your class implement HydraInterface?"));
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("HydraBlueprintDelegate Warning: Delegate is NOT set, did your class implement HydraInterface?"));
+		UE_LOG(LogClass, Log, TEXT("HydraBlueprintDelegate Warning: HydraInterface Delegate is NOT set, did your class implement HydraInterface? Events are disabled."));
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("HydraBlueprintDelegate Warning: Delegate is NOT set, did your class implement HydraInterface? Events are disabled."));
 	}
 }
 

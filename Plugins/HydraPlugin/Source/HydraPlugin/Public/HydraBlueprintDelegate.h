@@ -62,4 +62,5 @@ protected:
 private:
 	TArray<class UHydraSingleController*> _latestFrame;
 	UObject* _interfaceDelegate;
+	bool implementsInterface();
 };
