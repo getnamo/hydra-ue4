@@ -14,7 +14,8 @@
 	[
 		{
 			"Name" : "HydraPlugin",
-			"Type" : "Runtime"
+			"Type" : "Runtime",
+			"WhitelistPlatforms" : [ "Win64", "Win32" ]
 		}
 	]
 }
