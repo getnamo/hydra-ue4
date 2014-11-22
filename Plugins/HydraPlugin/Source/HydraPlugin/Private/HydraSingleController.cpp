@@ -9,12 +9,12 @@ UHydraSingleController::UHydraSingleController(const FPostConstructInitializePro
 
 bool UHydraSingleController::isLeftHand()
 {
-	return handPossession == HydraControllerHand::HYDRA_LEFT_HAND;
+	return handPossession == HydraControllerHand::HYDRA_HAND_LEFT;
 }
 
 bool UHydraSingleController::isRightHand()
 {
-	return handPossession == HydraControllerHand::HYDRA_RIGHT_HAND;
+	return handPossession == HydraControllerHand::HYDRA_HAND_RIGHT;
 }
 
 void UHydraSingleController::setFromSixenseDataUE(sixenseControllerDataUE* data)

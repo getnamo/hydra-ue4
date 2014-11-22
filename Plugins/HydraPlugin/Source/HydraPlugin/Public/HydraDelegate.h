@@ -7,8 +7,23 @@
 UENUM(BlueprintType)
 enum HydraControllerHand
 {
-	HYDRA_LEFT_HAND = 1,
-	HYDRA_RIGHT_HAND
+	HYDRA_HAND_UNKNOWN,
+	HYDRA_HAND_LEFT,
+	HYDRA_HAND_RIGHT
+};
+
+UENUM(BlueprintType)
+enum HydraControllerButton
+{
+	HYDRA_BUTTON_UNKNOWN,
+	HYDRA_BUTTON_B1,
+	HYDRA_BUTTON_B2,
+	HYDRA_BUTTON_B3,
+	HYDRA_BUTTON_B4,
+	HYDRA_BUTTON_START,
+	HYDRA_BUTTON_JOYSTICK,
+	HYDRA_BUTTON_BUMPER,
+	HYDRA_BUTTON_TRIGGER
 };
 
 //Input Mapping Keys
@@ -118,7 +133,8 @@ public:
 	virtual void HydraDocked(int32 controller);
 	virtual void HydraUndocked(int32 controller);
 
-	virtual void HydraAnyButtonPressed(int32 controller);
+	virtual void HydraButtonPressed(int32 controller, HydraControllerButton button);
+	virtual void HydraButtonReleased(int32 controller, HydraControllerButton button);
 	virtual void HydraB1Pressed(int32 controller);
 	virtual void HydraB1Released(int32 controller);
 	virtual void HydraB2Pressed(int32 controller);
@@ -153,4 +169,7 @@ public:
 	//** Required Calls */
 	virtual void HydraStartup();				//Call this somewhere in an initializing state such as BeginPlay()
 	virtual void HydraTick(float DeltaTime);	//Call this every tick
+
+	//Optional if you're extending data types, this is when you update the references, called from plugin
+	virtual void UpdateControllerReference(sixenseControllerDataUE* controller, int index) {};
 };

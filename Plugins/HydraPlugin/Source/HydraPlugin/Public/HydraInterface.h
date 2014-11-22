@@ -31,7 +31,9 @@ public:
 	void HydraUndocked(UHydraSingleController* controller);
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Hydra Interface Events")
-	void HydraAnyButtonPressed(UHydraSingleController* controller);
+	void HydraButtonPressed(UHydraSingleController* controller, HydraControllerButton button);
+	UFUNCTION(BlueprintImplementableEvent, Category = "Hydra Interface Events")
+	void HydraButtonReleased(UHydraSingleController* controller, HydraControllerButton button);
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Hydra Interface Events")
 	void HydraB1Pressed(UHydraSingleController* controller);

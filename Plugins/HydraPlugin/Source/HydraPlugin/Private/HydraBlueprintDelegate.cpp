@@ -32,10 +32,15 @@ void HydraBlueprintDelegate::HydraUndocked(int32 controller)
 	if (implementsInterface())
 		IHydraInterface::Execute_HydraUndocked(_interfaceDelegate, _latestFrame[controller]);
 }
-void HydraBlueprintDelegate::HydraAnyButtonPressed(int32 controller)
+void HydraBlueprintDelegate::HydraButtonPressed(int32 controller, HydraControllerButton button)
 {
 	if (implementsInterface())
-		IHydraInterface::Execute_HydraAnyButtonPressed(_interfaceDelegate, _latestFrame[controller]);
+		IHydraInterface::Execute_HydraButtonPressed(_interfaceDelegate, _latestFrame[controller], button);
+}
+void HydraBlueprintDelegate::HydraButtonReleased(int32 controller, HydraControllerButton button)
+{
+	if (implementsInterface())
+		IHydraInterface::Execute_HydraButtonReleased(_interfaceDelegate, _latestFrame[controller], button);
 }
 void HydraBlueprintDelegate::HydraB1Pressed(int32 controller)
 {
@@ -219,12 +224,11 @@ void HydraBlueprintDelegate::HydraStartup()
 void HydraBlueprintDelegate::HydraTick(float DeltaTime)
 {
 	HydraDelegate::HydraTick(DeltaTime);
+}
 
-	//Sync our array
-	for (int i = 0; i < MAX_CONTROLLERS_SUPPORTED; i++)
-	{
-		UHydraSingleController* controller = _latestFrame[i];
-		controller->setFromSixenseDataUE(HydraDelegate::HydraGetLatestData(i));
-		controller->controllerId = i;
-	}
+void HydraBlueprintDelegate::UpdateControllerReference(sixenseControllerDataUE* controllerData, int index)
+{
+	UHydraSingleController* controller = _latestFrame[index];
+	controller->setFromSixenseDataUE(controllerData);
+	controller->controllerId = index;
 }

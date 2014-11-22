@@ -17,7 +17,8 @@ public:
 	void HydraControllerDisabled(int32 controller) override;
 	void HydraDocked(int32 controller) override;
 	void HydraUndocked(int32 controller) override;
-	void HydraAnyButtonPressed(int32 controller) override;
+	void HydraButtonPressed(int32 controller, HydraControllerButton button) override;
+	void HydraButtonReleased(int32 controller, HydraControllerButton button) override;
 	void HydraB1Pressed(int32 controller) override;
 	void HydraB1Released(int32 controller) override;
 	void HydraB2Pressed(int32 controller) override;
@@ -53,6 +54,8 @@ public:
 	//** Required Calls */
 	virtual void HydraStartup() override;				//Call this somewhere in an initializing state such as BeginPlay()
 	virtual void HydraTick(float DeltaTime) override;	//Call this every tick
+
+	void UpdateControllerReference(sixenseControllerDataUE* controller, int index) override;
 
 	//If you want an alternate delegate, set it here
 	void SetInterfaceDelegate(UObject* newDelegate);

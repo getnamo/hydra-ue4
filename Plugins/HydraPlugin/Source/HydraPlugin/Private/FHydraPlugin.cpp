@@ -309,8 +309,12 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 	//Trigger any delegate events
 	for (int i = 0; i < MAX_CONTROLLERS_SUPPORTED; i++)
 	{
+
 		controller = &hydraDelegate->HydraLatestData->controllers[i];
 		previous = &hydraDelegate->HydraHistoryData[0].controllers[i];
+
+		//Sync any extended data forms such as HydraSingleController, so that the correct instance values are sent and not 1 frame delayed
+		hydraDelegate->UpdateControllerReference(controller, i);
 
 		//If it is enabled run through all the event notifications and data integration
 		if (controller->enabled)
@@ -320,6 +324,9 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 			{
 				DelegateCheckEnabledCount(&plugNotChecked);
 				hydraDelegate->HydraControllerEnabled(i);
+
+				//Skip this loop, previous state comparisons will be wrong
+				continue;
 			}
 
 			//Docking
@@ -362,7 +369,7 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 
 					if (controller->trigger_pressed)
 					{
-						hydraDelegate->HydraAnyButtonPressed(i);
+						hydraDelegate->HydraButtonPressed(i, HYDRA_BUTTON_TRIGGER);
 						hydraDelegate->HydraTriggerPressed(i);
 						//InputMapping
 						if (leftHand)
@@ -371,6 +378,7 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 							FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraRightTriggerClick, 0, 0);
 					}
 					else{
+						hydraDelegate->HydraButtonReleased(i, HYDRA_BUTTON_TRIGGER);
 						hydraDelegate->HydraTriggerReleased(i);
 						//InputMapping
 						if (leftHand)
@@ -386,7 +394,7 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 			{
 				if ((controller->buttons & SIXENSE_BUTTON_BUMPER) == SIXENSE_BUTTON_BUMPER)
 				{
-					hydraDelegate->HydraAnyButtonPressed(i);
+					hydraDelegate->HydraButtonPressed(i, HYDRA_BUTTON_BUMPER);
 					hydraDelegate->HydraBumperPressed(i);
 					//InputMapping
 					if (leftHand)
@@ -395,6 +403,7 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraRightBumper, 0, 0);
 				}
 				else{
+					hydraDelegate->HydraButtonReleased(i, HYDRA_BUTTON_BUMPER);
 					hydraDelegate->HydraBumperReleased(i);
 					//InputMapping
 					if (leftHand)
@@ -409,7 +418,7 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 			{
 				if ((controller->buttons & SIXENSE_BUTTON_1) == SIXENSE_BUTTON_1)
 				{
-					hydraDelegate->HydraAnyButtonPressed(i);
+					hydraDelegate->HydraButtonPressed(i, HYDRA_BUTTON_B1);
 					hydraDelegate->HydraB1Pressed(i);
 					//InputMapping
 					if (leftHand)
@@ -418,6 +427,7 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraRightB1, 0, 0);
 				}
 				else{
+					hydraDelegate->HydraButtonReleased(i, HYDRA_BUTTON_B1);
 					hydraDelegate->HydraB1Released(i);
 					//InputMapping
 					if (leftHand)
@@ -431,7 +441,7 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 			{
 				if ((controller->buttons & SIXENSE_BUTTON_2) == SIXENSE_BUTTON_2)
 				{
-					hydraDelegate->HydraAnyButtonPressed(i);
+					hydraDelegate->HydraButtonPressed(i, HYDRA_BUTTON_B2);
 					hydraDelegate->HydraB2Pressed(i);
 					//InputMapping
 					if (leftHand)
@@ -440,6 +450,7 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraRightB2, 0, 0);
 				}
 				else{
+					hydraDelegate->HydraButtonReleased(i, HYDRA_BUTTON_B2);
 					hydraDelegate->HydraB2Released(i);
 					//InputMapping
 					if (leftHand)
@@ -453,7 +464,7 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 			{
 				if ((controller->buttons & SIXENSE_BUTTON_3) == SIXENSE_BUTTON_3)
 				{
-					hydraDelegate->HydraAnyButtonPressed(i);
+					hydraDelegate->HydraButtonPressed(i, HYDRA_BUTTON_B3);
 					hydraDelegate->HydraB3Pressed(i);
 					//InputMapping
 					if (leftHand)
@@ -462,6 +473,7 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraRightB3, 0, 0);
 				}
 				else{
+					hydraDelegate->HydraButtonReleased(i, HYDRA_BUTTON_B3);
 					hydraDelegate->HydraB3Released(i);
 					//InputMapping
 					if (leftHand)
@@ -475,7 +487,7 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 			{
 				if ((controller->buttons & SIXENSE_BUTTON_4) == SIXENSE_BUTTON_4)
 				{
-					hydraDelegate->HydraAnyButtonPressed(i);
+					hydraDelegate->HydraButtonPressed(i, HYDRA_BUTTON_B4);
 					hydraDelegate->HydraB4Pressed(i);
 					//InputMapping
 					if (leftHand)
@@ -484,6 +496,7 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraRightB4, 0, 0);
 				}
 				else{
+					hydraDelegate->HydraButtonReleased(i, HYDRA_BUTTON_B4);
 					hydraDelegate->HydraB4Released(i);
 					//InputMapping
 					if (leftHand)
@@ -498,7 +511,7 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 			{
 				if ((controller->buttons & SIXENSE_BUTTON_START) == SIXENSE_BUTTON_START)
 				{
-					hydraDelegate->HydraAnyButtonPressed(i);
+					hydraDelegate->HydraButtonPressed(i, HYDRA_BUTTON_START);
 					hydraDelegate->HydraStartPressed(i);
 					//InputMapping
 					if (leftHand)
@@ -507,6 +520,7 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraRightStart, 0, 0);
 				}
 				else{
+					hydraDelegate->HydraButtonReleased(i, HYDRA_BUTTON_START);
 					hydraDelegate->HydraStartReleased(i);
 					//InputMapping
 					if (leftHand)
@@ -521,7 +535,7 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 			{
 				if ((controller->buttons & SIXENSE_BUTTON_JOYSTICK) == SIXENSE_BUTTON_JOYSTICK)
 				{
-					hydraDelegate->HydraAnyButtonPressed(i);
+					hydraDelegate->HydraButtonPressed(i, HYDRA_BUTTON_JOYSTICK);
 					hydraDelegate->HydraJoystickPressed(i);
 					//InputMapping
 					if (leftHand)
@@ -530,6 +544,7 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraRightJoystickClick, 0, 0);
 				}
 				else{
+					hydraDelegate->HydraButtonReleased(i, HYDRA_BUTTON_JOYSTICK);
 					hydraDelegate->HydraJoystickReleased(i);
 					//InputMapping
 					if (leftHand)

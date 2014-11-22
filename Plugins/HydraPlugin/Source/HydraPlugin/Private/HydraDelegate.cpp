@@ -53,7 +53,8 @@ void HydraDelegate::HydraPluggedIn(){}
 void HydraDelegate::HydraUnplugged(){}
 void HydraDelegate::HydraDocked(int32 controller){}
 void HydraDelegate::HydraUndocked(int32 controller){}
-void HydraDelegate::HydraAnyButtonPressed(int32 controller){}
+void HydraDelegate::HydraButtonPressed(int32 controller, HydraControllerButton button){}
+void HydraDelegate::HydraButtonReleased(int32 controller, HydraControllerButton button){}
 void HydraDelegate::HydraB1Pressed(int32 controller){}
 void HydraDelegate::HydraB1Released(int32 controller){}
 void HydraDelegate::HydraB2Pressed(int32 controller){}
