@@ -119,10 +119,12 @@ See [tutorial video](https://www.youtube.com/watch?v=zRURG4Zp0Zo) for a live exa
 
 When you're ready to ship
 
- 1. As of UE4.5, your project needs code. Even if you're using blueprint only, add code to your project and compile (it doesn't need to do anything).
- 2. Package your game
- 3. Copy only the *Binaries* folder into your packaged build *{ProjectName}* folder. E.g. if I packaged a project called *HydraTest* in my packaged directory (typically called *WindowsNoEditor*) find the *HydraTest* folder and place the Plugins folder there.
- 4. Confirm that it's working by launching your packaged game executable from the *Binaries* subfolder.
+<ol>
+<li> Projects require code for shipping in order to include the plugin, if you are using a blueprint only project, add an empty class and compile your project module. You simply do File->Add Code to Project and it can be anything so I usually just pick None->Create Class and then it will ask you to open visual studio where you just hit compile (Build solution). If you haven't added code before follow the unreal engine <a href="https://docs.unrealengine.com/latest/INT/Programming/QuickStart/1/index.html">programming Quick Start</a> guide. Essentially it boils down to downloading the free Visual Studio Community and changing a few small configs.</li>
+<li>Package your game
+<li>Copy only the *Binaries* folder into your packaged build *{ProjectName}* folder. E.g. if I packaged a project called *HydraTest* in my packaged directory (typically called *WindowsNoEditor*) find the *HydraTest* folder and place the Plugins folder there.
+<li>Confirm that it's working by launching your packaged game executable from the *Binaries* subfolder.
+</ol>
 
 ### Shipping Troubleshoot ###
 
