@@ -3,7 +3,7 @@
 #include "HydraSingleController.h"
 #include <sixense.h>
 
-UHydraSingleController::UHydraSingleController(const FPostConstructInitializeProperties &init) : UObject(init)
+UHydraSingleController::UHydraSingleController(const FObjectInitializer &init) : UObject(init)
 {
 }
 

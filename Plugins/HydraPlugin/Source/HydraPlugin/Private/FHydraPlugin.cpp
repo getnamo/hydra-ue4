@@ -5,7 +5,7 @@
 #include "FHydraPlugin.h"
 #include "HydraDelegate.h"
 #include "HydraSingleController.h"
-#include "Slate.h"
+#include "SlateBasics.h"
 
 #include <iostream>
 #include <stdexcept>
@@ -27,6 +27,25 @@ typedef int (*dll_sixenseGetAllNewestData)(sixenseAllControllerData *);
 dll_sixenseInit HydraInit;
 dll_sixenseExit HydraExit;
 dll_sixenseGetAllNewestData HydraGetAllNewestData;
+
+//UE v4.6 IM event wrappers
+bool EmitKeyUpEventForKey(FKey key, int32 user, bool repeat)
+{
+	FKeyEvent KeyEvent(key, FSlateApplication::Get().GetModifierKeys(), user, repeat, 0, 0);
+	return FSlateApplication::Get().ProcessKeyUpEvent(KeyEvent);
+}
+
+bool EmitKeyDownEventForKey(FKey key, int32 user, bool repeat)
+{
+	FKeyEvent KeyEvent(key, FSlateApplication::Get().GetModifierKeys(), user, repeat, 0, 0);
+	return FSlateApplication::Get().ProcessKeyDownEvent(KeyEvent);
+}
+
+bool EmitAnalogInputEventForKey(FKey key, float value, int32 user, bool repeat)
+{
+	FAnalogInputEvent AnalogInputEvent(key, FSlateApplication::Get().GetModifierKeys(), user, repeat, 0, 0, value);
+	return FSlateApplication::Get().ProcessAnalogInputEvent(AnalogInputEvent);
+}
 
 //Collector class contains all the data captured from .dll and delegate data will point to this structure (allDataUE and historicalDataUE).
 class DataCollector
@@ -346,7 +365,7 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 
 			//** Buttons */
 
-			//Trigger
+			//Trigger 
 			if (controller->trigger < 0.5)
 			{
 				controller->trigger_pressed = false;
@@ -360,9 +379,9 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 				hydraDelegate->HydraTriggerChanged(i, controller->trigger);
 				//InputMapping
 				if (leftHand)
-					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraLeftTrigger, 0, controller->trigger);
+					EmitAnalogInputEventForKey(EKeysHydra::HydraLeftTrigger, controller->trigger, 0, 0);
 				else
-					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraRightTrigger, 0, controller->trigger);
+					EmitAnalogInputEventForKey(EKeysHydra::HydraRightTrigger, controller->trigger, 0, 0);
 
 				if (controller->trigger_pressed != previous->trigger_pressed)
 				{
@@ -373,18 +392,18 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 						hydraDelegate->HydraTriggerPressed(i);
 						//InputMapping
 						if (leftHand)
-							FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraLeftTriggerClick, 0, 0);
+							EmitKeyDownEventForKey(EKeysHydra::HydraLeftTriggerClick, 0, 0);
 						else
-							FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraRightTriggerClick, 0, 0);
+							EmitKeyDownEventForKey(EKeysHydra::HydraRightTriggerClick, 0, 0);
 					}
 					else{
 						hydraDelegate->HydraButtonReleased(i, HYDRA_BUTTON_TRIGGER);
 						hydraDelegate->HydraTriggerReleased(i);
 						//InputMapping
 						if (leftHand)
-							FSlateApplication::Get().OnControllerButtonReleased(EKeysHydra::HydraLeftTriggerClick, 0, 0);
+							EmitKeyUpEventForKey(EKeysHydra::HydraLeftTriggerClick, 0, 0);
 						else
-							FSlateApplication::Get().OnControllerButtonReleased(EKeysHydra::HydraRightTriggerClick, 0, 0);
+							EmitKeyUpEventForKey(EKeysHydra::HydraRightTriggerClick, 0, 0);
 					}
 				}
 			}
@@ -398,18 +417,18 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 					hydraDelegate->HydraBumperPressed(i);
 					//InputMapping
 					if (leftHand)
-						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraLeftBumper, 0, 0);
+						EmitKeyDownEventForKey(EKeysHydra::HydraLeftBumper, 0, 0);
 					else
-						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraRightBumper, 0, 0);
+						EmitKeyDownEventForKey(EKeysHydra::HydraRightBumper, 0, 0);
 				}
 				else{
 					hydraDelegate->HydraButtonReleased(i, HYDRA_BUTTON_BUMPER);
 					hydraDelegate->HydraBumperReleased(i);
 					//InputMapping
 					if (leftHand)
-						FSlateApplication::Get().OnControllerButtonReleased(EKeysHydra::HydraLeftBumper, 0, 0);
+						EmitKeyUpEventForKey(EKeysHydra::HydraLeftBumper, 0, 0);
 					else
-						FSlateApplication::Get().OnControllerButtonReleased(EKeysHydra::HydraRightBumper, 0, 0);
+						EmitKeyUpEventForKey(EKeysHydra::HydraRightBumper, 0, 0);
 				}
 			}
 
@@ -422,18 +441,18 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 					hydraDelegate->HydraB1Pressed(i);
 					//InputMapping
 					if (leftHand)
-						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraLeftB1, 0, 0);
+						EmitKeyDownEventForKey(EKeysHydra::HydraLeftB1, 0, 0);
 					else
-						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraRightB1, 0, 0);
+						EmitKeyDownEventForKey(EKeysHydra::HydraRightB1, 0, 0);
 				}
 				else{
 					hydraDelegate->HydraButtonReleased(i, HYDRA_BUTTON_B1);
 					hydraDelegate->HydraB1Released(i);
 					//InputMapping
 					if (leftHand)
-						FSlateApplication::Get().OnControllerButtonReleased(EKeysHydra::HydraLeftB1, 0, 0);
+						EmitKeyUpEventForKey(EKeysHydra::HydraLeftB1, 0, 0);
 					else
-						FSlateApplication::Get().OnControllerButtonReleased(EKeysHydra::HydraRightB1, 0, 0);
+						EmitKeyUpEventForKey(EKeysHydra::HydraRightB1, 0, 0);
 				}
 			}
 			//B2
@@ -445,18 +464,18 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 					hydraDelegate->HydraB2Pressed(i);
 					//InputMapping
 					if (leftHand)
-						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraLeftB2, 0, 0);
+						EmitKeyDownEventForKey(EKeysHydra::HydraLeftB2, 0, 0);
 					else
-						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraRightB2, 0, 0);
+						EmitKeyDownEventForKey(EKeysHydra::HydraRightB2, 0, 0);
 				}
 				else{
 					hydraDelegate->HydraButtonReleased(i, HYDRA_BUTTON_B2);
 					hydraDelegate->HydraB2Released(i);
 					//InputMapping
 					if (leftHand)
-						FSlateApplication::Get().OnControllerButtonReleased(EKeysHydra::HydraLeftB2, 0, 0);
+						EmitKeyUpEventForKey(EKeysHydra::HydraLeftB2, 0, 0);
 					else
-						FSlateApplication::Get().OnControllerButtonReleased(EKeysHydra::HydraRightB2, 0, 0);
+						EmitKeyUpEventForKey(EKeysHydra::HydraRightB2, 0, 0);
 				}
 			}
 			//B3
@@ -468,18 +487,18 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 					hydraDelegate->HydraB3Pressed(i);
 					//InputMapping
 					if (leftHand)
-						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraLeftB3, 0, 0);
+						EmitKeyDownEventForKey(EKeysHydra::HydraLeftB3, 0, 0);
 					else
-						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraRightB3, 0, 0);
+						EmitKeyDownEventForKey(EKeysHydra::HydraRightB3, 0, 0);
 				}
 				else{
 					hydraDelegate->HydraButtonReleased(i, HYDRA_BUTTON_B3);
 					hydraDelegate->HydraB3Released(i);
 					//InputMapping
 					if (leftHand)
-						FSlateApplication::Get().OnControllerButtonReleased(EKeysHydra::HydraLeftB3, 0, 0);
+						EmitKeyUpEventForKey(EKeysHydra::HydraLeftB3, 0, 0);
 					else
-						FSlateApplication::Get().OnControllerButtonReleased(EKeysHydra::HydraRightB3, 0, 0);
+						EmitKeyUpEventForKey(EKeysHydra::HydraRightB3, 0, 0);
 				}
 			}
 			//B4
@@ -491,18 +510,18 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 					hydraDelegate->HydraB4Pressed(i);
 					//InputMapping
 					if (leftHand)
-						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraLeftB4, 0, 0);
+						EmitKeyDownEventForKey(EKeysHydra::HydraLeftB4, 0, 0);
 					else
-						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraRightB4, 0, 0);
+						EmitKeyDownEventForKey(EKeysHydra::HydraRightB4, 0, 0);
 				}
 				else{
 					hydraDelegate->HydraButtonReleased(i, HYDRA_BUTTON_B4);
 					hydraDelegate->HydraB4Released(i);
 					//InputMapping
 					if (leftHand)
-						FSlateApplication::Get().OnControllerButtonReleased(EKeysHydra::HydraLeftB4, 0, 0);
+						EmitKeyUpEventForKey(EKeysHydra::HydraLeftB4, 0, 0);
 					else
-						FSlateApplication::Get().OnControllerButtonReleased(EKeysHydra::HydraRightB4, 0, 0);
+						EmitKeyUpEventForKey(EKeysHydra::HydraRightB4, 0, 0);
 				}
 			}
 
@@ -515,18 +534,18 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 					hydraDelegate->HydraStartPressed(i);
 					//InputMapping
 					if (leftHand)
-						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraLeftStart, 0, 0);
+						EmitKeyDownEventForKey(EKeysHydra::HydraLeftStart, 0, 0);
 					else
-						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraRightStart, 0, 0);
+						EmitKeyDownEventForKey(EKeysHydra::HydraRightStart, 0, 0);
 				}
 				else{
 					hydraDelegate->HydraButtonReleased(i, HYDRA_BUTTON_START);
 					hydraDelegate->HydraStartReleased(i);
 					//InputMapping
 					if (leftHand)
-						FSlateApplication::Get().OnControllerButtonReleased(EKeysHydra::HydraLeftStart, 0, 0);
+						EmitKeyUpEventForKey(EKeysHydra::HydraLeftStart, 0, 0);
 					else
-						FSlateApplication::Get().OnControllerButtonReleased(EKeysHydra::HydraRightStart, 0, 0);
+						EmitKeyUpEventForKey(EKeysHydra::HydraRightStart, 0, 0);
 				}
 			}
 
@@ -539,18 +558,18 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 					hydraDelegate->HydraJoystickPressed(i);
 					//InputMapping
 					if (leftHand)
-						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraLeftJoystickClick, 0, 0);
+						EmitKeyDownEventForKey(EKeysHydra::HydraLeftJoystickClick, 0, 0);
 					else
-						FSlateApplication::Get().OnControllerButtonPressed(EKeysHydra::HydraRightJoystickClick, 0, 0);
+						EmitKeyDownEventForKey(EKeysHydra::HydraRightJoystickClick, 0, 0);
 				}
 				else{
 					hydraDelegate->HydraButtonReleased(i, HYDRA_BUTTON_JOYSTICK);
 					hydraDelegate->HydraJoystickReleased(i);
 					//InputMapping
 					if (leftHand)
-						FSlateApplication::Get().OnControllerButtonReleased(EKeysHydra::HydraLeftJoystickClick, 0, 0);
+						EmitKeyUpEventForKey(EKeysHydra::HydraLeftJoystickClick, 0, 0);
 					else
-						FSlateApplication::Get().OnControllerButtonReleased(EKeysHydra::HydraRightJoystickClick, 0, 0);
+						EmitKeyUpEventForKey(EKeysHydra::HydraRightJoystickClick, 0, 0);
 				}
 			}
 
@@ -564,13 +583,13 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 				//InputMapping
 				if (leftHand)
 				{
-					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraLeftJoystickX, 0, controller->joystick.X);
-					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraLeftJoystickY, 0, controller->joystick.Y);
+					EmitAnalogInputEventForKey(EKeysHydra::HydraLeftJoystickX, controller->joystick.X, 0, 0);
+					EmitAnalogInputEventForKey(EKeysHydra::HydraLeftJoystickY, controller->joystick.Y, 0, 0);
 				}
 				else
 				{
-					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraRightJoystickX, 0, controller->joystick.X);
-					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraRightJoystickY, 0, controller->joystick.Y);
+					EmitAnalogInputEventForKey(EKeysHydra::HydraRightJoystickX, controller->joystick.X, 0, 0);
+					EmitAnalogInputEventForKey(EKeysHydra::HydraRightJoystickY, controller->joystick.Y, 0, 0);
 				}
 
 				//axis test
@@ -582,7 +601,7 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 			//Calculate Velocity, Acceleration, and angular velocity
 			controller->velocity = (controller->position - previous->position) / DeltaTime;
 			controller->acceleration = (controller->velocity - previous->velocity) / DeltaTime;
-			controller->angular_velocity = FRotator(controller->quat - previous->quat);	//unscaled by deltatime
+			controller->angular_velocity = FRotator(controller->quat - previous->quat);	//unscaled by delta time
 			float DeltaSquared = (DeltaTime*DeltaTime);
 			controller->angular_velocity = FRotator(controller->angular_velocity.Pitch / DeltaSquared,
 				controller->angular_velocity.Yaw / DeltaSquared,
@@ -600,22 +619,24 @@ void FHydraPlugin::DelegateTick(float DeltaTime)
 				if (leftHand)
 				{
 					//2 meters = 1.0
-					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraLeftMotionX, 0, MotionInputMappingConversion(controller->position.X));
-					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraLeftMotionY, 0, MotionInputMappingConversion(controller->position.Y));
-					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraLeftMotionZ, 0, MotionInputMappingConversion(controller->position.Z));
-					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraLeftRotationPitch, 0, rotation.Pitch / 90.f);
-					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraLeftRotationYaw, 0, rotation.Yaw / 180.f);
-					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraLeftRotationRoll, 0, rotation.Roll / 180.f);
+					EmitAnalogInputEventForKey(EKeysHydra::HydraLeftMotionX, MotionInputMappingConversion(controller->position.X), 0, 0);
+					EmitAnalogInputEventForKey(EKeysHydra::HydraLeftMotionY, MotionInputMappingConversion(controller->position.Y), 0, 0);
+					EmitAnalogInputEventForKey(EKeysHydra::HydraLeftMotionZ, MotionInputMappingConversion(controller->position.Z), 0, 0);
+
+					EmitAnalogInputEventForKey(EKeysHydra::HydraLeftRotationPitch, rotation.Pitch / 90.f, 0, 0);
+					EmitAnalogInputEventForKey(EKeysHydra::HydraLeftRotationYaw, rotation.Yaw / 180.f, 0, 0);
+					EmitAnalogInputEventForKey(EKeysHydra::HydraLeftRotationRoll, rotation.Roll / 180.f, 0, 0);
 				}
 				else
 				{
 					//2 meters = 1.0
-					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraRightMotionX, 0, MotionInputMappingConversion(controller->position.X));
-					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraRightMotionY, 0, MotionInputMappingConversion(controller->position.Y));
-					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraRightMotionZ, 0, MotionInputMappingConversion(controller->position.Z));
-					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraRightRotationPitch, 0, rotation.Pitch / 90.f);
-					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraRightRotationYaw, 0, rotation.Yaw / 180.f);
-					FSlateApplication::Get().OnControllerAnalog(EKeysHydra::HydraRightRotationRoll, 0, rotation.Roll / 180.f);
+					EmitAnalogInputEventForKey(EKeysHydra::HydraRightMotionX, MotionInputMappingConversion(controller->position.X), 0, 0);
+					EmitAnalogInputEventForKey(EKeysHydra::HydraRightMotionY, MotionInputMappingConversion(controller->position.Y), 0, 0);
+					EmitAnalogInputEventForKey(EKeysHydra::HydraRightMotionZ, MotionInputMappingConversion(controller->position.Z), 0, 0);
+
+					EmitAnalogInputEventForKey(EKeysHydra::HydraRightRotationPitch, rotation.Pitch / 90.f, 0, 0);
+					EmitAnalogInputEventForKey(EKeysHydra::HydraRightRotationYaw, rotation.Yaw / 180.f, 0, 0);
+					EmitAnalogInputEventForKey(EKeysHydra::HydraRightRotationRoll, rotation.Roll / 180.f, 0, 0);
 				}
 			}
 		}//end enabled

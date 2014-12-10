@@ -3,7 +3,7 @@
 #include "HydraPluginPrivatePCH.h"
 #include "HydraInterface.h"
 
-UHydraInterface::UHydraInterface(const class FPostConstructInitializeProperties& PCIP)
+UHydraInterface::UHydraInterface(const class FObjectInitializer& PCIP)
 	: Super(PCIP)
 {
 

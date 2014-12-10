@@ -6,7 +6,7 @@
 #include "HydraPluginActor.h"
 
 //Constructor/Initializer
-AHydraPluginActor::AHydraPluginActor(const FPostConstructInitializeProperties& PCIP)
+AHydraPluginActor::AHydraPluginActor(const FObjectInitializer& PCIP)
 : Super(PCIP)
 {
 	PrimaryActorTick.bCanEverTick = true;

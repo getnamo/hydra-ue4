@@ -5,7 +5,7 @@
 #include "HydraPlayerController.h"
 
 //Constructor/Initializer
-AHydraPlayerController::AHydraPlayerController(const class FPostConstructInitializeProperties& PCIP)
+AHydraPlayerController::AHydraPlayerController(const class FObjectInitializer& PCIP)
 	: Super(PCIP)
 {
 	PrimaryActorTick.bCanEverTick = true;

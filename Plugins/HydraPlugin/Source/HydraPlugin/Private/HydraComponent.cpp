@@ -4,7 +4,7 @@
 #include "Engine.h"
 #include "CoreUObject.h"
 
-UHydraComponent::UHydraComponent(const FPostConstructInitializeProperties &init) : UActorComponent(init)
+UHydraComponent::UHydraComponent(const FObjectInitializer &init) : UActorComponent(init)
 {
 	bWantsInitializeComponent = true;
 	bAutoActivate = true;
