@@ -63,7 +63,8 @@ public:
 protected:
 	UObject* ValidSelfPointer;	//REQUIRED: has to be set before HydraStartup by a UObject subclass.
 private:
-	TArray<class UHydraSingleController*> _latestFrame;
+	class UHydraSingleController* _latestFrame[MAX_CONTROLLERS_SUPPORTED];
 	UObject* _interfaceDelegate;
 	bool implementsInterface();
+	UHydraSingleController* controllerForId(int controllerId);
 };

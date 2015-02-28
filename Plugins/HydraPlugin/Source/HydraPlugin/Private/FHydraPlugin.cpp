@@ -16,7 +16,7 @@
 IMPLEMENT_MODULE(FHydraPlugin, HydraPlugin)
 
 #define LOCTEXT_NAMESPACE "HydraPlugin"
-#define PLUGIN_VERSION "0.7.6"
+#define PLUGIN_VERSION "0.7.7"
 
 //Private API - This is where the magic happens
 
@@ -81,7 +81,7 @@ public:
 		converted.hardware_revision = data->hardware_revision;
 		converted.packet_type = data->packet_type;
 		converted.magnetic_frequency = data->magnetic_frequency;
-		converted.enabled = (data->enabled != 0);
+		converted.enabled = (data->enabled == 1);
 		converted.controller_index = data->controller_index;
 		converted.is_docked = (data->is_docked != 0);
 		converted.which_hand = data->which_hand;
