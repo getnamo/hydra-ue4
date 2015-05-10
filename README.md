@@ -59,18 +59,13 @@ Available since v0.7, this method works by adding a Hydra Component and then sub
 ##### Setup #####
 <ol>
 <li> Open the blueprint you wish to receive hydra events.</li>
-<li> Add the Hydra Component to your blueprint through method 3 or 4.</li>
-<li> (Option 1) Add component directly</li>
+<li> Add the Hydra Component to your blueprint through by clicking add component and selecting Hydra under Input</li>
 
-<img src="http://i.imgur.com/04uZ62p.png">
+<img src="http://i.imgur.com/g9UaYvt.png">
 
-<li> (Option 2) Add component through event graph</li>
+<li> To receive events we now have to add an interface. Click on Class Settings and under Details find 'Add' under interfaces. Add the HydraInterface.</li>
 
-<img src="http://i.imgur.com/We6ATck.png">
-
-<li> To receive events we now have to add an interface. Click on Blueprint Props and under Details find 'Add' under interfaces. Add the HydraInterface.</li>
-
-<img src="http://i.imgur.com/QgrcTgi.png">
+<img src="http://i.imgur.com/TW1GVbJ.png">
 
 </ol>
 
@@ -94,6 +89,20 @@ Available since v0.7, this method works by adding a Hydra Component and then sub
 <img src="http://i.imgur.com/IopRDKg.png">
 
 </ol>
+
+##### How to Use - Example
+Using the third person template you can attach the Hydra component and interface to the Character blueprint.
+
+After hitting compile, you add the following graph
+<img src="http://i.imgur.com/eJJZ2Ua.png">
+
+Then go into Edit->Project Settings and Click Engine->Input to change input mapping events.
+
+<img src="http://i.imgur.com/gjrptFt.png">
+
+With that changed simply hit play to move your 3rd person character with your hydra joysticks, hit B1 to jump and anytime you have the hydras undocked you will see two debug boxes showing their locations and orientations relative to your character.
+
+<img src="http://i.imgur.com/0grYkZP.gif">
 
 
 ### Events through C++ ###
