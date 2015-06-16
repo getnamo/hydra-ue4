@@ -16,7 +16,7 @@
 IMPLEMENT_MODULE(FHydraPlugin, HydraPlugin)
 
 #define LOCTEXT_NAMESPACE "HydraPlugin"
-#define PLUGIN_VERSION "0.7.7"
+#define PLUGIN_VERSION "0.7.8"
 
 //Private API - This is where the magic happens
 
