@@ -10,7 +10,15 @@ The plugin also handles hot plugging and emits HydraPluggedIn (HydraUnplugged fo
 
 [Unreal Engine Wiki](https://wiki.unrealengine.com/Unofficial_Hydra_Plugin)
 
-## Motion Controller Setup ##
+## Quick Install & Setup ##
+
+ 1.	Download
+ 2.	Create new or choose project.
+ 3.	Browse to your project folder (typically found at Documents/Unreal Project/{Your Project Root})
+ 4.	Copy *Plugins* and *Binaries* folders into your Project root.
+ 5.	Restart the Editor and open your project again. Plugin is now ready to use.
+
+## Motion Controller Documentation ##
 
 Please refer to the [Motion Controller Component Setup unreal documentation](https://docs.unrealengine.com/latest/INT/Platforms/VR/MotionController/index.html) as this setup is hardware agnostic.
 
