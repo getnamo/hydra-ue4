@@ -1,6 +1,6 @@
 #pragma once
 
-#include "HydraDelegate.h"
+#include "HydraEnum.h"
 #include "HydraSingleController.generated.h"
 
 UCLASS(BlueprintType)

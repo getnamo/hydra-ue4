@@ -1,5 +1,4 @@
 #include "HydraPluginPrivatePCH.h"
-#include "HydraDelegate.h"
 #include "HydraSingleController.h"
 #include <sixense.h>
 

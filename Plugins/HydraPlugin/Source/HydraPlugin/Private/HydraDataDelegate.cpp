@@ -1,7 +1,9 @@
 #pragma once
 
 #include "HydraPluginPrivatePCH.h"
-#include "HydraDelegate.h"
+#include "HydraDataDelegate.h"
+#include "HydraSingleController.h"
+
 #include "IHydraPlugin.h"
 
 //FKey declarations
@@ -47,53 +49,53 @@ const FKey EKeysHydra::HydraRightRotationYaw("HydraRightRotationYaw");
 const FKey EKeysHydra::HydraRightRotationRoll("HydraRightRotationRoll");
 
 /** Empty Event Functions, no Super call required, because they don't do anything! */
-void HydraDelegate::HydraControllerEnabled(int32 controller){}
-void HydraDelegate::HydraControllerDisabled(int32 controller){}
-void HydraDelegate::HydraPluggedIn(){}
-void HydraDelegate::HydraUnplugged(){}
-void HydraDelegate::HydraDocked(int32 controller){}
-void HydraDelegate::HydraUndocked(int32 controller){}
-void HydraDelegate::HydraButtonPressed(int32 controller, HydraControllerButton button){}
-void HydraDelegate::HydraButtonReleased(int32 controller, HydraControllerButton button){}
-void HydraDelegate::HydraB1Pressed(int32 controller){}
-void HydraDelegate::HydraB1Released(int32 controller){}
-void HydraDelegate::HydraB2Pressed(int32 controller){}
-void HydraDelegate::HydraB2Released(int32 controller){}
-void HydraDelegate::HydraB3Pressed(int32 controller){}
-void HydraDelegate::HydraB3Released(int32 controller){}
-void HydraDelegate::HydraB4Pressed(int32 controller){}
-void HydraDelegate::HydraB4Released(int32 controller){}
-void HydraDelegate::HydraTriggerPressed(int32 controller){}
-void HydraDelegate::HydraTriggerReleased(int32 controller){}
-void HydraDelegate::HydraTriggerChanged(int32 controller, float value){}
-void HydraDelegate::HydraBumperPressed(int32 controller){}
-void HydraDelegate::HydraBumperReleased(int32 controller){}
-void HydraDelegate::HydraJoystickPressed(int32 controller){}
-void HydraDelegate::HydraJoystickReleased(int32 controller){}
-void HydraDelegate::HydraStartPressed(int32 controller){}
-void HydraDelegate::HydraStartReleased(int32 controller){}
+void HydraDataDelegate::HydraControllerEnabled(int32 controller){}
+void HydraDataDelegate::HydraControllerDisabled(int32 controller){}
+void HydraDataDelegate::HydraPluggedIn(){}
+void HydraDataDelegate::HydraUnplugged(){}
+void HydraDataDelegate::HydraDocked(int32 controller){}
+void HydraDataDelegate::HydraUndocked(int32 controller){}
+void HydraDataDelegate::HydraButtonPressed(int32 controller, HydraControllerButton button){}
+void HydraDataDelegate::HydraButtonReleased(int32 controller, HydraControllerButton button){}
+void HydraDataDelegate::HydraB1Pressed(int32 controller){}
+void HydraDataDelegate::HydraB1Released(int32 controller){}
+void HydraDataDelegate::HydraB2Pressed(int32 controller){}
+void HydraDataDelegate::HydraB2Released(int32 controller){}
+void HydraDataDelegate::HydraB3Pressed(int32 controller){}
+void HydraDataDelegate::HydraB3Released(int32 controller){}
+void HydraDataDelegate::HydraB4Pressed(int32 controller){}
+void HydraDataDelegate::HydraB4Released(int32 controller){}
+void HydraDataDelegate::HydraTriggerPressed(int32 controller){}
+void HydraDataDelegate::HydraTriggerReleased(int32 controller){}
+void HydraDataDelegate::HydraTriggerChanged(int32 controller, float value){}
+void HydraDataDelegate::HydraBumperPressed(int32 controller){}
+void HydraDataDelegate::HydraBumperReleased(int32 controller){}
+void HydraDataDelegate::HydraJoystickPressed(int32 controller){}
+void HydraDataDelegate::HydraJoystickReleased(int32 controller){}
+void HydraDataDelegate::HydraStartPressed(int32 controller){}
+void HydraDataDelegate::HydraStartReleased(int32 controller){}
 
-void HydraDelegate::HydraJoystickMoved(int32 controller, FVector2D movement){};
-void HydraDelegate::HydraControllerMoved(int32 controller,
+void HydraDataDelegate::HydraJoystickMoved(int32 controller, FVector2D movement){};
+void HydraDataDelegate::HydraControllerMoved(int32 controller,
 	FVector position, FVector velocity, FVector acceleration,
 	FRotator rotation, FRotator angularVelocity){};
 
 /** Availability */
-bool HydraDelegate::HydraIsAvailable()
+bool HydraDataDelegate::HydraIsAvailable()
 {
 	//hydra will always have an enabled count of 2 when plugged in and working, stem functionality undefined.
 	return HydraLatestData->enabledCount == 2;
 }
 
 /** Call to determine which hand you're holding the controller in. Determine by last docking position.*/
-HydraControllerHand HydraDelegate::HydraWhichHand(int32 controller)
+HydraControllerHand HydraDataDelegate::HydraWhichHand(int32 controller)
 {
 	return (HydraControllerHand)HydraLatestData->controllers[controller].which_hand;
 }
 
 /** Poll for latest data.*/
 
-sixenseControllerDataUE* HydraDelegate::HydraGetLatestData(int32 controllerId)
+sixenseControllerDataUE* HydraDataDelegate::HydraGetLatestData(int32 controllerId)
 {
 	if ((controllerId > MAX_CONTROLLERS_SUPPORTED) || (controllerId < 0))
 	{
@@ -103,7 +105,7 @@ sixenseControllerDataUE* HydraDelegate::HydraGetLatestData(int32 controllerId)
 }
 
 /** Poll for historical data. Valid index is 0-9 */
-sixenseControllerDataUE* HydraDelegate::HydraGetHistoricalData(int32 controllerId, int32 historyIndex)
+sixenseControllerDataUE* HydraDataDelegate::HydraGetHistoricalData(int32 controllerId, int32 historyIndex)
 {
 	if ((historyIndex<0) || (historyIndex>9) || (controllerId > MAX_CONTROLLERS_SUPPORTED) || (controllerId < 0))
 	{
@@ -115,19 +117,25 @@ sixenseControllerDataUE* HydraDelegate::HydraGetHistoricalData(int32 controllerI
 	return data;
 }
 
-void HydraDelegate::HydraStartup()
+void HydraDataDelegate::UpdateControllerReference(sixenseControllerDataUE* controller, int index)
 {
-	if (IHydraPlugin::IsAvailable())
+	//Get the hand index and set
+	HydraControllerHand hand = HydraWhichHand(index);
+
+	if (hand == HYDRA_HAND_LEFT)
 	{
-		//Required to Work - Set self as a delegate
-		IHydraPlugin::Get().SetDelegate((HydraDelegate*)this);
+		if (LeftController== nullptr)
+		{
+			LeftController = NewObject<UHydraSingleController>(UHydraSingleController::StaticClass());
+		}
+		LeftController->setFromSixenseDataUE(controller);
 	}
-}
-void HydraDelegate::HydraTick(float DeltaTime)
-{
-	if (IHydraPlugin::IsAvailable())
+	else if (hand == HYDRA_HAND_RIGHT)
 	{
-		//Required to Work - This is the plugin magic
-		IHydraPlugin::Get().HydraTick(DeltaTime);
+		if (RightController == nullptr)
+		{
+			RightController = NewObject<UHydraSingleController>(UHydraSingleController::StaticClass());
+		}
+		RightController->setFromSixenseDataUE(controller);
 	}
 }

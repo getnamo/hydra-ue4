@@ -2,11 +2,11 @@
     "FileVersion" : 3,
 	
 	"FriendlyName" : "Hydra Plugin",
-	"Version" : 5,
-	"VersionName" : "0.7.8",
+	"Version" : 6,
+	"VersionName" : "0.8.0",
 	"CreatedBy" : "Getnamo",
 	"CreatedByURL" : "http://syntheticinsights.com",
-	"EngineVersion" : "4.8+",
+	"EngineVersion" : "4.9+",
 	"Description" : "Unofficial plugin for the Razer Hydra Motion Controller",
 	"Category" : "Input.Controller",
 	
