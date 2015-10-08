@@ -15,7 +15,7 @@ The plugin also handles hot plugging and emits HydraPluggedIn (HydraUnplugged fo
  1.	Download
  2.	Create new or choose project.
  3.	Browse to your project folder (typically found at Documents/Unreal Project/{Your Project Root})
- 4.	Copy *Plugins* and *Binaries* folders into your Project root.
+ 4.	Copy *Plugins* folder into your Project root.
  5.	Restart the Editor and open your project again. Plugin is now ready to use.
 
 ## Motion Controller Documentation ##
@@ -31,14 +31,7 @@ Also you cannot calibrate the motion controller innately, add an offset to the c
 
 ## Shipping ##
 
-When you're ready to ship
-
-<ol>
-<li> Projects require code for shipping in order to include the plugin, if you are using a blueprint only project, add an empty class and compile your project module. You simply do File->Add Code to Project and it can be anything so I usually just pick None->Create Class and then it will ask you to open visual studio where you just hit compile (Build solution). If you haven't added code before follow the unreal engine <a href="https://docs.unrealengine.com/latest/INT/Programming/QuickStart/1/index.html">programming Quick Start</a> guide. Essentially it boils down to downloading the free Visual Studio Community and changing a few small configs.</li>
-<li>Package your game
-<li>Copy only the *Binaries* folder into your packaged build *{ProjectName}* folder. E.g. if I packaged a project called *HydraTest* in my packaged directory (typically called *WindowsNoEditor*) find the *HydraTest* folder and place the Plugins folder there.
-<li>Confirm that it's working by launching your packaged game executable from the *Binaries* subfolder.
-</ol>
+When you're ready to ship, just package the folder. With the current state the dll gets copied, but the project may not launch (fatal error)
 
 ### Shipping Troubleshoot ###
 
@@ -66,9 +59,5 @@ Plugin made by Getnamo. Point all questions to the main discussion thread.
 
 The Sixense SDK is licensed under [Sixense EULA](http://sixense.com/eula).
 
-<a rel="license" href="http://creativecommons.org/publicdomain/mark/1.0/">
-<img src="http://i.creativecommons.org/p/mark/1.0/88x31.png"
-     style="border-style: none;" alt="Public Domain Mark" />
-</a>
 <br />
-Anything not covered by Sixense EULA and [Unreal Engine EULA](https://www.unrealengine.com/eula) in <span property="dct:title">Hydra UE4 Plugin</span> is free of known copyright restrictions.
+Anything not covered by Sixense EULA and [Unreal Engine EULA](https://www.unrealengine.com/eula) in <span property="dct:title">Hydra UE4 Plugin</span> provided under [MIT license](https://en.wikipedia.org/wiki/MIT_License). Do anything you want just retain the notice.
