@@ -19,6 +19,7 @@ bool UHydraSingleController::isRightHand()
 void UHydraSingleController::setFromSixenseDataUE(sixenseControllerDataUE* data)
 {
 	this->position = data->position;
+	this->rawPosition = data->rawPosition;
 	this->velocity = data->velocity;
 	this->acceleration = data->acceleration;
 	

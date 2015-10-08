@@ -3,16 +3,33 @@
 #include "HydraEnum.h"
 
 class UHydraSingleController;
+class UHydraPluginComponent;
 
 class HydraDataDelegate
 {
 	friend class FHydraController;
 public:
+	HydraDataDelegate();
+	~HydraDataDelegate();
+	
 	//Namespace Hydra for variables, functions and events.
 
+	//Controller short-hands
 	UHydraSingleController* LeftController = nullptr;
+	int32 LeftControllerId = 0;
 	UHydraSingleController* RightController = nullptr;
+	int32 RightControllerId = 1;
 
+	//Offset to base
+	FVector baseOffset = FVector(0, 0, 0);
+	
+	//Event multi-cast delegation
+	TArray<UHydraPluginComponent*> eventDelegates;
+	void AddEventDelegate(UHydraPluginComponent* delegate);
+	void RemoveEventDelegate(UHydraPluginComponent* delegate);
+
+	void CallFunctionOnDelegates(TFunction< void(UHydraPluginComponent*)> InFunction);
+	
 	/** Latest will always contain the freshest controller data, external pointer do not delete*/
 	sixenseAllControllerDataUE* HydraLatestData;
 
@@ -61,6 +78,7 @@ public:
 	//** Callable Functions (for public polling support) */
 	virtual bool HydraIsAvailable();
 	virtual HydraControllerHand HydraWhichHand(int32 controllerId);	//call to determine which hand the controller is held in. Determined and reset on controller docking.
+	virtual UHydraSingleController* HydraControllerForID(int32 controllerId);
 	virtual sixenseControllerDataUE* HydraGetLatestData(int32 controllerId);
 	virtual sixenseControllerDataUE* HydraGetHistoricalData(int32 controllerId, int32 historyIndex);
 

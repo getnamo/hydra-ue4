@@ -3,6 +3,7 @@
 #include "HydraPluginPrivatePCH.h"
 #include "HydraDataDelegate.h"
 #include "HydraSingleController.h"
+#include "HydraComponent.h"
 
 #include "IHydraPlugin.h"
 
@@ -19,6 +20,8 @@ const FKey EKeysHydra::HydraLeftStart("HydraLeftStart");
 const FKey EKeysHydra::HydraLeftTrigger("HydraLeftTrigger");
 const FKey EKeysHydra::HydraLeftTriggerClick("HydraLeftTriggerAxis");
 const FKey EKeysHydra::HydraLeftBumper("HydraLeftBumper");
+
+const FKey EKeysHydra::HydraLeftDocked("HydraLeftDocked");
 
 const FKey EKeysHydra::HydraLeftMotionX("HydraLeftMotionX");
 const FKey EKeysHydra::HydraLeftMotionY("HydraLeftMotionY");
@@ -40,6 +43,8 @@ const FKey EKeysHydra::HydraRightTrigger("HydraRightTrigger");
 const FKey EKeysHydra::HydraRightTriggerClick("HydraRightTriggerAxis");
 const FKey EKeysHydra::HydraRightBumper("HydraRightBumper");
 
+const FKey EKeysHydra::HydraRightDocked("HydraRightDocked");
+
 const FKey EKeysHydra::HydraRightMotionX("HydraRightMotionX");
 const FKey EKeysHydra::HydraRightMotionY("HydraRightMotionY");
 const FKey EKeysHydra::HydraRightMotionZ("HydraRightMotionZ");
@@ -51,34 +56,77 @@ const FKey EKeysHydra::HydraRightRotationRoll("HydraRightRotationRoll");
 /** Empty Event Functions, no Super call required, because they don't do anything! */
 void HydraDataDelegate::HydraControllerEnabled(int32 controller){}
 void HydraDataDelegate::HydraControllerDisabled(int32 controller){}
-void HydraDataDelegate::HydraPluggedIn(){}
-void HydraDataDelegate::HydraUnplugged(){}
-void HydraDataDelegate::HydraDocked(int32 controller){}
-void HydraDataDelegate::HydraUndocked(int32 controller){}
-void HydraDataDelegate::HydraButtonPressed(int32 controller, HydraControllerButton button){}
-void HydraDataDelegate::HydraButtonReleased(int32 controller, HydraControllerButton button){}
-void HydraDataDelegate::HydraB1Pressed(int32 controller){}
-void HydraDataDelegate::HydraB1Released(int32 controller){}
-void HydraDataDelegate::HydraB2Pressed(int32 controller){}
-void HydraDataDelegate::HydraB2Released(int32 controller){}
-void HydraDataDelegate::HydraB3Pressed(int32 controller){}
-void HydraDataDelegate::HydraB3Released(int32 controller){}
-void HydraDataDelegate::HydraB4Pressed(int32 controller){}
-void HydraDataDelegate::HydraB4Released(int32 controller){}
-void HydraDataDelegate::HydraTriggerPressed(int32 controller){}
-void HydraDataDelegate::HydraTriggerReleased(int32 controller){}
-void HydraDataDelegate::HydraTriggerChanged(int32 controller, float value){}
-void HydraDataDelegate::HydraBumperPressed(int32 controller){}
-void HydraDataDelegate::HydraBumperReleased(int32 controller){}
-void HydraDataDelegate::HydraJoystickPressed(int32 controller){}
-void HydraDataDelegate::HydraJoystickReleased(int32 controller){}
-void HydraDataDelegate::HydraStartPressed(int32 controller){}
-void HydraDataDelegate::HydraStartReleased(int32 controller){}
 
-void HydraDataDelegate::HydraJoystickMoved(int32 controller, FVector2D movement){};
-void HydraDataDelegate::HydraControllerMoved(int32 controller,
+//Except the ones that are hooked into multi-cast delegates
+void HydraDataDelegate::HydraPluggedIn()
+{
+	CallFunctionOnDelegates([](UHydraPluginComponent* delegate)
+	{
+		delegate->PluggedIn.Broadcast();
+	});
+}
+void HydraDataDelegate::HydraUnplugged()
+{
+	CallFunctionOnDelegates([](UHydraPluginComponent* delegate)
+	{
+		delegate->Unplugged.Broadcast();
+	});
+}
+void HydraDataDelegate::HydraDocked(int32 controllerId)
+{
+	UHydraSingleController* controller = HydraControllerForID(controllerId);
+	CallFunctionOnDelegates([&](UHydraPluginComponent* delegate)
+	{
+		delegate->ControllerDocked.Broadcast(controller);
+	});
+}
+void HydraDataDelegate::HydraUndocked(int32 controllerId)
+{
+	UHydraSingleController* controller = HydraControllerForID(controllerId);
+	CallFunctionOnDelegates([&](UHydraPluginComponent* delegate)
+	{
+		delegate->ControllerUndocked.Broadcast(controller);
+	});
+}
+
+void HydraDataDelegate::HydraButtonPressed(int32 controllerId, HydraControllerButton button){}
+void HydraDataDelegate::HydraButtonReleased(int32 controllerId, HydraControllerButton button){}
+void HydraDataDelegate::HydraB1Pressed(int32 controllerId){}
+void HydraDataDelegate::HydraB1Released(int32 controllerId){}
+void HydraDataDelegate::HydraB2Pressed(int32 controllerId){}
+void HydraDataDelegate::HydraB2Released(int32 controllerId){}
+void HydraDataDelegate::HydraB3Pressed(int32 controllerId){}
+void HydraDataDelegate::HydraB3Released(int32 controllerId){}
+void HydraDataDelegate::HydraB4Pressed(int32 controllerId){}
+void HydraDataDelegate::HydraB4Released(int32 controllerId){}
+void HydraDataDelegate::HydraTriggerPressed(int32 controllerId){}
+void HydraDataDelegate::HydraTriggerReleased(int32 controllerId){}
+void HydraDataDelegate::HydraTriggerChanged(int32 controllerId, float value){}
+void HydraDataDelegate::HydraBumperPressed(int32 controllerId){}
+void HydraDataDelegate::HydraBumperReleased(int32 controllerId){}
+void HydraDataDelegate::HydraJoystickPressed(int32 controllerId){}
+void HydraDataDelegate::HydraJoystickReleased(int32 controllerId){}
+void HydraDataDelegate::HydraStartPressed(int32 controllerId){}
+void HydraDataDelegate::HydraStartReleased(int32 controllerId){}
+
+void HydraDataDelegate::HydraJoystickMoved(int32 controllerId, FVector2D movement)
+{
+	UHydraSingleController* controller = HydraControllerForID(controllerId);
+	CallFunctionOnDelegates([&](UHydraPluginComponent* delegate)
+	{
+		delegate->JoystickMoved.Broadcast(controller, movement);
+	});
+};
+void HydraDataDelegate::HydraControllerMoved(int32 controllerId,
 	FVector position, FVector velocity, FVector acceleration,
-	FRotator rotation, FRotator angularVelocity){};
+	FRotator rotation, FRotator angularVelocity)
+{
+	UHydraSingleController* controller = HydraControllerForID(controllerId);
+	CallFunctionOnDelegates([&](UHydraPluginComponent* delegate)
+	{
+		delegate->ControllerMoved.Broadcast(controller,position,velocity,acceleration,rotation,angularVelocity);
+	});
+};
 
 /** Availability */
 bool HydraDataDelegate::HydraIsAvailable()
@@ -87,10 +135,60 @@ bool HydraDataDelegate::HydraIsAvailable()
 	return HydraLatestData->enabledCount == 2;
 }
 
+
+void HydraDataDelegate::AddEventDelegate(UHydraPluginComponent* delegate)
+{
+	eventDelegates.Add(delegate);
+}
+
+void HydraDataDelegate::RemoveEventDelegate(UHydraPluginComponent* delegate)
+{
+	eventDelegates.Remove(delegate);
+}
+
+
+void HydraDataDelegate::CallFunctionOnDelegates(TFunction< void(UHydraPluginComponent*)> InFunction)
+{
+	for (UHydraPluginComponent* eventDelegate : eventDelegates)
+	{
+		InFunction(eventDelegate);
+	}
+}
+
+HydraDataDelegate::HydraDataDelegate()
+{
+	//eventDelegates = NewObject<TArray<IHydraInterface*>>();
+	//eventDelegates->AddToRoot();
+}
+HydraDataDelegate::~HydraDataDelegate(){
+	if (LeftController)
+		LeftController->RemoveFromRoot();
+	if (RightController)
+		RightController->RemoveFromRoot();
+}
+
 /** Call to determine which hand you're holding the controller in. Determine by last docking position.*/
 HydraControllerHand HydraDataDelegate::HydraWhichHand(int32 controller)
 {
 	return (HydraControllerHand)HydraLatestData->controllers[controller].which_hand;
+}
+
+
+UHydraSingleController* HydraDataDelegate::HydraControllerForID(int32 controllerId)
+{
+	HydraControllerHand hand = HydraWhichHand(controllerId);
+	switch (hand){
+	case HYDRA_HAND_LEFT:
+		return LeftController;
+		break;
+	case HYDRA_HAND_RIGHT:
+		return RightController;
+		break;
+	case HYDRA_HAND_UNKNOWN:
+		return nullptr;
+			break;
+	}
+	return nullptr;
 }
 
 /** Poll for latest data.*/
@@ -126,16 +224,21 @@ void HydraDataDelegate::UpdateControllerReference(sixenseControllerDataUE* contr
 	{
 		if (LeftController== nullptr)
 		{
-			LeftController = NewObject<UHydraSingleController>(UHydraSingleController::StaticClass());
+			LeftController = NewObject<UHydraSingleController>();
+			LeftController->AddToRoot();
 		}
 		LeftController->setFromSixenseDataUE(controller);
+		LeftControllerId = index;
 	}
 	else if (hand == HYDRA_HAND_RIGHT)
 	{
 		if (RightController == nullptr)
 		{
-			RightController = NewObject<UHydraSingleController>(UHydraSingleController::StaticClass());
+			RightController = NewObject<UHydraSingleController>();//UHydraSingleController::StaticClass()
+			RightController->AddToRoot();	//we root these otherwise they can be removed early
 		}
 		RightController->setFromSixenseDataUE(controller);
+		RightControllerId = index;
 	}
 }
+

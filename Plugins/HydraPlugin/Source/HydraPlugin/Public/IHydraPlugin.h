@@ -5,6 +5,8 @@
 #include "ModuleManager.h"
 #include "IInputDeviceModule.h"
 
+class HydraDataDelegate;
+
 /**
  * The public interface to this module
  */
@@ -21,7 +23,7 @@ public:
 	 */
 	static inline IHydraPlugin& Get()
 	{
-		return FModuleManager::LoadModuleChecked< IHydraPlugin >( "HydraController" );
+		return FModuleManager::LoadModuleChecked< IHydraPlugin >( "HydraPlugin" );
 	}
 
 	/**
@@ -31,7 +33,13 @@ public:
 	 */
 	static inline bool IsAvailable()
 	{
-		return FModuleManager::Get().IsModuleLoaded( "HydraController" );
+		return FModuleManager::Get().IsModuleLoaded( "HydraPlugin" );
 	}
+
+	virtual HydraDataDelegate* DataDelegate(){ return nullptr; };
+	
+	//For now add behaves like set, no multicast support
+	virtual void AddInterfaceEventDelegate(UObject* delegate){};
+	//virtual void RemoveInterfaceEventDelegate(UObject* delegate){};
 };
 

@@ -6,6 +6,7 @@
 #include "HydraDataDelegate.h"
 #include "HydraSingleController.h"
 #include "SlateBasics.h"
+#include "IPluginManager.h"
 
 #include <iostream>
 #include <stdexcept>
@@ -14,7 +15,7 @@
 #include <windows.h>
 
 #define LOCTEXT_NAMESPACE "HydraPlugin"
-#define PLUGIN_VERSION "0.8.0"
+#define PLUGIN_VERSION "0.8.1"
 DEFINE_LOG_CATEGORY_STATIC(HydraPluginLog, Log, All);
 
 //Private API - This is where the magic happens
@@ -64,12 +65,13 @@ public:
 		delete[] historicalDataUE;
 	}
 
-	sixenseControllerDataUE ConvertData(sixenseControllerData* data)
+	sixenseControllerDataUE ConvertData(sixenseControllerData* data, FVector offset = FVector(0,0,0))
 	{
 		sixenseControllerDataUE converted;
 
 		//Convert Sixense Axis to Unreal: UnrealX = - SixenseZ   UnrealY = SixenseX   UnrealZ = SixenseY
-		converted.position = FVector(-data->pos[2]/10, data->pos[0]/10, data->pos[1]/10);							//converted to cm from mm
+		converted.rawPosition = FVector(-data->pos[2] / 10, data->pos[0] / 10, data->pos[1] / 10);					//converted to cm from mm
+		converted.position = converted.rawPosition + offset;							
 		converted.quat = FQuat(data->rot_quat[2], -data->rot_quat[0], -data->rot_quat[1], data->rot_quat[3]);		//converted & rotation values inverted
 		converted.rotation = FRotator(converted.quat);																//convert once and re-use in blueprints
 		converted.joystick = FVector2D(data->joystick_x, data->joystick_y);
@@ -89,13 +91,13 @@ public:
 		return converted;
 	}
 
-	void ConvertAllData()
+	void ConvertAllData(FVector offset = FVector(0, 0, 0))
 	{
 		allDataUE->enabledCount = 0;
 
 		for (int i = 0; i < MAX_CONTROLLERS_SUPPORTED; i++)
 		{
-			allDataUE->controllers[i] = ConvertData(&allData->controllers[i]);
+			allDataUE->controllers[i] = ConvertData(&allData->controllers[i], offset);
 			if (allDataUE->controllers[i].enabled){
 				allDataUE->enabledCount++;
 			}
@@ -140,6 +142,7 @@ public:
 
 		//Define Paths for direct dll bind
 		FString BinariesRoot = FPaths::Combine(*FPaths::GameDir(), TEXT("Binaries"));
+		FString PluginRoot = IPluginManager::Get().FindPlugin("HydraPlugin")->GetBaseDir();
 		FString PlatformString;
 		FString SixenseDLLString;
 
@@ -156,7 +159,10 @@ public:
 #else
 		UE_LOG(LogClass, Error, TEXT("Unsupported Platform. Hydra Unavailable."));
 #endif
-		FString DllFilepath = FPaths::ConvertRelativePathToFull(FPaths::Combine(*BinariesRoot, *PlatformString, *SixenseDLLString));
+		
+		FString DllFilepath = FPaths::ConvertRelativePathToFull(FPaths::Combine(*PluginRoot, TEXT("Source/ThirdParty/Sixense/Binaries"), *PlatformString, *SixenseDLLString));
+
+		UE_LOG(HydraPluginLog, Log, TEXT("Fetching dll from %s"), *DllFilepath);
 
 		//Check if the file exists, if not, give a detailed log entry why
 		if (!FPaths::FileExists(DllFilepath)){
@@ -184,6 +190,10 @@ public:
 			UE_LOG(HydraPluginLog, Log, TEXT("Hydra Available."));
 
 			//Attach all EKeys
+
+			//Misc
+			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftDocked, LOCTEXT("HydraLeftDocked", "Hydra Left Docked"), FKeyDetails::GamepadKey));
+			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightDocked, LOCTEXT("HydraRightDocked", "Hydra Right Docked"), FKeyDetails::GamepadKey));
 
 			//Left
 			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftJoystickX, LOCTEXT("HydraLeftJoystickX", "Hydra Left Joystick X"), FKeyDetails::FloatAxis));
@@ -275,7 +285,10 @@ public:
 		}
 
 		//convert and pass the data to the delegate
-		collector->ConvertAllData();
+		collector->ConvertAllData(hydraDelegate->baseOffset);
+
+		//Modify by base offset
+
 
 		//Call the delegate once it has been set
 		if (hydraDelegate != NULL && shouldSendInputEvents)
@@ -338,17 +351,12 @@ public:
 		MessageHandler = InMessageHandler;
 	}
 
-
 private:
 	//Delegate Private functions
 	void DelegateUpdateAllData();
 	void DelegateCheckEnabledCount(bool* plugNotChecked);
 	void DelegateTick(float DeltaTime);
 };
-
-
-
-
 
 
 //Public API Implementation
@@ -409,7 +417,6 @@ void FHydraController::DelegateTick(float DeltaTime)
 	//Trigger any delegate events
 	for (int i = 0; i < MAX_CONTROLLERS_SUPPORTED; i++)
 	{
-
 		controller = &hydraDelegate->HydraLatestData->controllers[i];
 		previous = &hydraDelegate->HydraHistoryData[0].controllers[i];
 
@@ -429,20 +436,28 @@ void FHydraController::DelegateTick(float DeltaTime)
 				continue;
 			}
 
+			//Determine Hand to support dynamic input mapping
+			bool leftHand = hydraDelegate->HydraWhichHand(i) == 1;
+
 			//Docking
 			if (controller->is_docked != previous->is_docked)
 			{
 				if (controller->is_docked)
 				{
 					hydraDelegate->HydraDocked(i);
+					if (leftHand)
+						EmitKeyDownEventForKey(EKeysHydra::HydraLeftDocked, 0, 0);
+					else
+						EmitKeyDownEventForKey(EKeysHydra::HydraRightDocked, 0, 0);
 				}
 				else{
 					hydraDelegate->HydraUndocked(i);
+					if (leftHand)
+						EmitKeyUpEventForKey(EKeysHydra::HydraLeftDocked, 0, 0);
+					else
+						EmitKeyUpEventForKey(EKeysHydra::HydraRightDocked, 0, 0);
 				}
 			}
-
-			//Determine Hand to support dynamic input mapping
-			bool leftHand = hydraDelegate->HydraWhichHand(i) == 1;
 
 			//** Buttons */
 
@@ -841,13 +856,22 @@ void FHydraController::DelegateTick(float DeltaTime)
 	hydraDelegate->HydraHistoryData[0] = *hydraDelegate->HydraLatestData;
 }
 
-//Implementign the module, required
+//Implementing the module, required
 class FHydraPlugin : public IHydraPlugin
 {
+	FHydraController* controllerReference = nullptr;
+
 	virtual TSharedPtr< class IInputDevice > CreateInputDevice(const TSharedRef< FGenericApplicationMessageHandler >& InMessageHandler) override
 	{
-		return TSharedPtr< class IInputDevice >(new FHydraController(InMessageHandler));
+		controllerReference = new FHydraController(InMessageHandler);
+		return TSharedPtr< class IInputDevice >(controllerReference);
+	}
+
+	virtual HydraDataDelegate* DataDelegate() override
+	{
+		return controllerReference->hydraDelegate;
 	}
 };
 
-IMPLEMENT_MODULE(FHydraPlugin, HydraController)
+//Second parameter needs to be called the same as the Module name or packaging will fail
+IMPLEMENT_MODULE(FHydraPlugin, HydraPlugin)	

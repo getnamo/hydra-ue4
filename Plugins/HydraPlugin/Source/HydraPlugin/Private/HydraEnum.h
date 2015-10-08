@@ -40,6 +40,8 @@ struct EKeysHydra
 	static const FKey HydraLeftTriggerClick;
 	static const FKey HydraLeftBumper;
 
+	static const FKey HydraLeftDocked;
+
 	//NB capped to 1.0 at 2 meters from base
 	static const FKey HydraLeftMotionX;
 	static const FKey HydraLeftMotionY;
@@ -61,6 +63,8 @@ struct EKeysHydra
 	static const FKey HydraRightTriggerClick;
 	static const FKey HydraRightBumper;
 
+	static const FKey HydraRightDocked;
+
 	//NB capped to 1.0 at 2 meters from base
 	static const FKey HydraRightMotionX;
 	static const FKey HydraRightMotionY;
@@ -79,6 +83,7 @@ struct EKeysHydra
 typedef struct _sixenseControllerDataUE{
 	//raw converted
 	FVector position;	//converted to cm
+	FVector rawPosition; //in cm without base offset
 	FQuat quat;			//converted to ue space, rotation in quaternion format
 	FRotator rotation;	//converted to ue space, use this version in blueprint
 	FVector2D joystick;

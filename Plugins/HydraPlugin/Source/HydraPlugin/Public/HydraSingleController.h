@@ -16,6 +16,9 @@ public:
 	FVector position;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hydra Frame")
+	FVector rawPosition;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hydra Frame")
 	FVector velocity;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hydra Frame")
