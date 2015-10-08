@@ -37,9 +37,5 @@ public:
 	}
 
 	virtual HydraDataDelegate* DataDelegate(){ return nullptr; };
-	
-	//For now add behaves like set, no multicast support
-	virtual void AddInterfaceEventDelegate(UObject* delegate){};
-	//virtual void RemoveInterfaceEventDelegate(UObject* delegate){};
 };
 

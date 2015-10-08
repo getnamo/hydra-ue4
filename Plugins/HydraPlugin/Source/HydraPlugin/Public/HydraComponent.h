@@ -9,6 +9,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FHydraPluggedInSignature);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FHydraUnPluggedSignature);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHydraDockedSignature, class UHydraSingleController*, controller);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHydraUnDockedSignature, class UHydraSingleController*, controller);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHydraButtonPressedSignature, class UHydraSingleController*, controller, EHydraControllerButton, button);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHydraButtonReleasedSignature, class UHydraSingleController*, controller, EHydraControllerButton, button);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHydraJoystickMovedSignature, class UHydraSingleController*, controller, FVector2D, movement);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_SixParams(FHydraControllerMovedSignature, class UHydraSingleController*, controller, FVector, position, FVector, velocity, FVector, acceleration, FRotator, orientation, FRotator, angularVelocity);
 
@@ -34,19 +36,28 @@ public:
 	FHydraUnDockedSignature ControllerUndocked;
 
 	UPROPERTY(BlueprintAssignable, Category = "Hydra Events")
+	FHydraButtonPressedSignature ButtonPressed;
+
+	UPROPERTY(BlueprintAssignable, Category = "Hydra Events")
+	FHydraButtonReleasedSignature ButtonReleased;
+
+	UPROPERTY(BlueprintAssignable, Category = "Hydra Events")
 	FHydraJoystickMovedSignature JoystickMoved;
 
 	UPROPERTY(BlueprintAssignable, Category = "Hydra Events")
 	FHydraControllerMovedSignature ControllerMoved;
 
-	//Interface overrides
-	/*virtual void HydraJoystickMoved(int32 controller, FVector2D movement) override;	//Range 0-1.0, 0-1.0
+	// Requires SetMeshComponentLinks to be called prior (e.g. in BeginPlay), then if true these will auto-hide when docked
+	UPROPERTY(EditAnywhere, Category = "Hydra Properties")
+	bool HideMeshComponentsWhenDocked;
 
-	virtual void HydraControllerMoved(int32 controller,
-		FVector position, FVector velocity, FVector acceleration,
-		FRotator rotation, FRotator angularVelocity) override;*/
+	// Once set, HideStaticMeshWhenDocked=true property will cause the bound components to hide.
+	UFUNCTION(BlueprintCallable, Category = "Hydra Functions")
+	void SetMeshComponentLinks(UMeshComponent* LeftMesh, UMeshComponent* RightMesh);
 
-
+	//Due to custom logic, call this instead of multi-cast directly
+	void Docked(UHydraSingleController* controller);
+	void Undocked(UHydraSingleController* controller);
 
 	//Callable Blueprint functions - Need to be defined for direct access
 	/** Check if the hydra is available/plugged in.*/
@@ -55,25 +66,28 @@ public:
 
 	//** Poll for historical data.  Valid Hand is Left or Right, Valid history index is 0-9.  */
 	UFUNCTION(BlueprintCallable, Category = HydraFunctions)
-	UHydraSingleController* GetHistoricalFrameForHand(HydraControllerHand hand = HYDRA_HAND_LEFT, int32 historyIndex = 0);
+	UHydraSingleController* GetHistoricalFrameForHand(EHydraControllerHand hand = HYDRA_HAND_LEFT, int32 historyIndex = 0);
 
 	//** Get the latest available data given in a single frame. Valid Hand is Left or Right  */
 	UFUNCTION(BlueprintCallable, Category = HydraFunctions)
-	UHydraSingleController* GetLatestFrameForHand(HydraControllerHand hand = HYDRA_HAND_LEFT);
+	UHydraSingleController* GetLatestFrameForHand(EHydraControllerHand hand = HYDRA_HAND_LEFT);
 
 	// Set a manual offset, use this for manual calibration
 	UFUNCTION(BlueprintCallable, Category = HydraFunctions)
 	void SetBaseOffset(FVector Offset);
 
-	// Use in-built calibration. Expects either a T-Pose or one controller to face/camera pose. If offset is provided it will add the given offset to the final calibration.
+	// Use in-built calibration. Expects either a T-Pose. If offset is provided it will add the given offset to the final calibration.
 	// For T-pose the function defaults to 40cm height. At 0,0,0 this will simply calibrate the zero position
 	UFUNCTION(BlueprintCallable, Category = HydraFunctions)
 	void Calibrate(FVector OffsetFromShoulderMidPoint = FVector(0,0,40));
 
 
 protected:
+	UMeshComponent* LeftMeshComponent;
+	UMeshComponent* RightMeshComponent;
+
 	//Utility Functions
-	int32 ControllerIdForHand(HydraControllerHand hand);
+	int32 ControllerIdForHand(EHydraControllerHand hand);
 
 	/** Poll for historical data. Valid ControllerId is 0 or 1, Valid history index is 0-9.*/
 	UHydraSingleController* GetHistoricalFrameForControllerId(int32 controllerId, int32 historyIndex);
@@ -85,6 +99,4 @@ protected:
 
 	virtual void InitializeComponent() override;
 	virtual void UninitializeComponent() override;
-
-	//virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
 };

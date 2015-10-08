@@ -64,7 +64,7 @@ public:
 	bool docked;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hydra Frame")
-	TEnumAsByte<HydraControllerHand> handPossession;
+	TEnumAsByte<EHydraControllerHand> handPossession;
 
 	//Convenience Call, optionally check hand possession property
 	UFUNCTION(BlueprintCallable, Category = "Hydra Frame")

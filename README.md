@@ -27,7 +27,40 @@ For input mapping purposes
 Hydra start == Face Button 5
 Hydra Joystick Click' == Face Button 6
 
-Also you cannot calibrate the motion controller innately, add an offset to the component manually for now.
+## Hydra Specific and Calibration ##
+
+![IMG](http://i.imgur.com/tTiZ3NI.png)
+
+If you want to calibrate or do anything specific, just add a hydra plugin component (renamed to avoid confusion with earlier components). These components are multicast and their events are as well so place them *anywhere* in multiples if you want to. They are also where you would poll for current or historical data for gesture recognition/etc.
+
+To calibrate you simply call Calibrate or SetBaseOffset on your component.
+
+![IMG](http://i.imgur.com/BAyjapm.png)
+
+Calibrate recalibrates the origin as coming from the centroid of your two hydras + the offset. In its default settings it should work as a good T-pose to shoulder midpoint.
+
+![IMG](http://i.imgur.com/y82yzEv.png)
+
+If you want to do your own calibration, just come up with a good position offset and set it here, all values onward will maintain this calibration, even between PIE sessions.
+
+You can also set links to the MeshComponents attached to your MotionControllerComponents and let the plugin auto-hide the meshes whenever you dock that controller.
+
+![IMG](http://i.imgur.com/coPNZTx.png)
+
+Just call SetMeshComponentLinks at some initialization stage e.g. BeginPlay and then check the option to HideMeshComponentsWhenDocked
+
+
+How about events? Now there are no more interfaces to deal with, instead you click on your hydra plugin component and click the green + to add the event from the details pane. This should feel familiar as these are the same blueprint assignable multicast delegates that PrimitiveComponents use for collision checks (e.g. OnBeginOverlap)
+
+![IMG](http://i.imgur.com/YpEA2da.png)
+
+e.g. if you want to have all the data to compare buttons or maybe do something with acceleration you can subscribe to the ControllerMoved event
+
+![IMG](http://i.imgur.com/2MyKAHq.png)
+
+To wrap it up, use input mapping events for all joystick and button input. You can use either the hardware agnostic motion controller buttons or the hydra specific ones, they work the same
+
+![IMG](http://i.imgur.com/DvQDz0E.png)
 
 ## Shipping ##
 
@@ -52,7 +85,7 @@ Your project runtime also continues working, but your hydra does not respond.
 Also you search your log file and find 
 ![alt text](http://i.imgur.com/jy6nsmX.png "Log of DLL not found Error")
 
-**Fix:** This error means the sixense dll file is missing. Copy the *Binaries* folder from the plugin into your *{packaged root}/{Project Name}*
+**Fix:** This error means the sixense dll file is missing.
 
 ## Credit and License##
 Plugin made by Getnamo. Point all questions to the main discussion thread.

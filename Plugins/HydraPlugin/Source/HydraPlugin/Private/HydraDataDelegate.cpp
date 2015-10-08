@@ -53,11 +53,11 @@ const FKey EKeysHydra::HydraRightRotationPitch("HydraRightRotationPitch");
 const FKey EKeysHydra::HydraRightRotationYaw("HydraRightRotationYaw");
 const FKey EKeysHydra::HydraRightRotationRoll("HydraRightRotationRoll");
 
-/** Empty Event Functions, no Super call required, because they don't do anything! */
+/** Empty Event Functions, no Super call required, because they don't do anything. Kept for easy future extension */
 void HydraDataDelegate::HydraControllerEnabled(int32 controller){}
 void HydraDataDelegate::HydraControllerDisabled(int32 controller){}
 
-//Except the ones that are hooked into multi-cast delegates
+//Except the ones that are hooked into multi-cast delegates, which call each attached delegate with the given function via a lambda pass
 void HydraDataDelegate::HydraPluggedIn()
 {
 	CallFunctionOnDelegates([](UHydraPluginComponent* delegate)
@@ -77,7 +77,8 @@ void HydraDataDelegate::HydraDocked(int32 controllerId)
 	UHydraSingleController* controller = HydraControllerForID(controllerId);
 	CallFunctionOnDelegates([&](UHydraPluginComponent* delegate)
 	{
-		delegate->ControllerDocked.Broadcast(controller);
+		//Specialized function handles the broadcast
+		delegate->Docked(controller);
 	});
 }
 void HydraDataDelegate::HydraUndocked(int32 controllerId)
@@ -85,12 +86,27 @@ void HydraDataDelegate::HydraUndocked(int32 controllerId)
 	UHydraSingleController* controller = HydraControllerForID(controllerId);
 	CallFunctionOnDelegates([&](UHydraPluginComponent* delegate)
 	{
-		delegate->ControllerUndocked.Broadcast(controller);
+		//Specialized function handles the broadcast
+		delegate->Undocked(controller);
 	});
 }
 
-void HydraDataDelegate::HydraButtonPressed(int32 controllerId, HydraControllerButton button){}
-void HydraDataDelegate::HydraButtonReleased(int32 controllerId, HydraControllerButton button){}
+void HydraDataDelegate::HydraButtonPressed(int32 controllerId, EHydraControllerButton button)
+{
+	UHydraSingleController* controller = HydraControllerForID(controllerId);
+	CallFunctionOnDelegates([&](UHydraPluginComponent* delegate)
+	{
+		delegate->ButtonPressed.Broadcast(controller, button);
+	});
+}
+void HydraDataDelegate::HydraButtonReleased(int32 controllerId, EHydraControllerButton button)
+{
+	UHydraSingleController* controller = HydraControllerForID(controllerId);
+	CallFunctionOnDelegates([&](UHydraPluginComponent* delegate)
+	{
+		delegate->ButtonReleased.Broadcast(controller, button);
+	});
+}
 void HydraDataDelegate::HydraB1Pressed(int32 controllerId){}
 void HydraDataDelegate::HydraB1Released(int32 controllerId){}
 void HydraDataDelegate::HydraB2Pressed(int32 controllerId){}
@@ -157,10 +173,14 @@ void HydraDataDelegate::CallFunctionOnDelegates(TFunction< void(UHydraPluginComp
 
 HydraDataDelegate::HydraDataDelegate()
 {
-	//eventDelegates = NewObject<TArray<IHydraInterface*>>();
-	//eventDelegates->AddToRoot();
+	//Ugly Init, but ensures no instance leakage, if you know how to remove the root references and attach this to a plugin parent UObject, make a pull request!
+	LeftController = NewObject<UHydraSingleController>();
+	LeftController->AddToRoot();	//we root these otherwise they can be removed early
+	RightController = NewObject<UHydraSingleController>();
+	RightController->AddToRoot();
 }
 HydraDataDelegate::~HydraDataDelegate(){
+	//Cleanup root references
 	if (LeftController)
 		LeftController->RemoveFromRoot();
 	if (RightController)
@@ -168,15 +188,33 @@ HydraDataDelegate::~HydraDataDelegate(){
 }
 
 /** Call to determine which hand you're holding the controller in. Determine by last docking position.*/
-HydraControllerHand HydraDataDelegate::HydraWhichHand(int32 controller)
+EHydraControllerHand HydraDataDelegate::HydraWhichHand(int32 controller)
 {
-	return (HydraControllerHand)HydraLatestData->controllers[controller].which_hand;
+	return (EHydraControllerHand)HydraLatestData->controllers[controller].which_hand;
 }
 
 
 UHydraSingleController* HydraDataDelegate::HydraControllerForID(int32 controllerId)
 {
-	HydraControllerHand hand = HydraWhichHand(controllerId);
+	return HydraControllerForHydraHand(HydraWhichHand(controllerId));
+}
+
+UHydraSingleController* HydraDataDelegate::HydraControllerForControllerHand(EControllerHand hand)
+{
+	switch (hand)
+	{
+	case EControllerHand::Left:
+		return LeftController;
+		break;
+	case EControllerHand::Right:
+		return RightController;
+		break;
+	}
+	return nullptr;
+}
+
+UHydraSingleController* HydraDataDelegate::HydraControllerForHydraHand(EHydraControllerHand hand)
+{
 	switch (hand){
 	case HYDRA_HAND_LEFT:
 		return LeftController;
@@ -186,7 +224,7 @@ UHydraSingleController* HydraDataDelegate::HydraControllerForID(int32 controller
 		break;
 	case HYDRA_HAND_UNKNOWN:
 		return nullptr;
-			break;
+		break;
 	}
 	return nullptr;
 }
@@ -218,25 +256,15 @@ sixenseControllerDataUE* HydraDataDelegate::HydraGetHistoricalData(int32 control
 void HydraDataDelegate::UpdateControllerReference(sixenseControllerDataUE* controller, int index)
 {
 	//Get the hand index and set
-	HydraControllerHand hand = HydraWhichHand(index);
+	EHydraControllerHand hand = HydraWhichHand(index);
 
 	if (hand == HYDRA_HAND_LEFT)
 	{
-		if (LeftController== nullptr)
-		{
-			LeftController = NewObject<UHydraSingleController>();
-			LeftController->AddToRoot();
-		}
 		LeftController->setFromSixenseDataUE(controller);
 		LeftControllerId = index;
 	}
 	else if (hand == HYDRA_HAND_RIGHT)
 	{
-		if (RightController == nullptr)
-		{
-			RightController = NewObject<UHydraSingleController>();//UHydraSingleController::StaticClass()
-			RightController->AddToRoot();	//we root these otherwise they can be removed early
-		}
 		RightController->setFromSixenseDataUE(controller);
 		RightControllerId = index;
 	}

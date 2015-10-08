@@ -4,7 +4,7 @@
 #define CONTROLLERS_PER_PLAYER	2
 
 UENUM(BlueprintType)
-enum HydraControllerHand
+enum EHydraControllerHand
 {
 	HYDRA_HAND_UNKNOWN,
 	HYDRA_HAND_LEFT,
@@ -12,7 +12,7 @@ enum HydraControllerHand
 };
 
 UENUM(BlueprintType)
-enum HydraControllerButton
+enum EHydraControllerButton
 {
 	HYDRA_BUTTON_UNKNOWN,
 	HYDRA_BUTTON_B1,

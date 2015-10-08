@@ -104,7 +104,6 @@ namespace UnrealBuildTool.Rules
                 PublicIncludePaths.Add(Path.Combine(ThirdPartyPath, "Sixense", "Include"));
             }
 
-            //Definitions.Add(string.Format("WITH_HYDRA_BINDING={0}", isLibrarySupported ? 1 : 0));
 
             return isLibrarySupported;
         }

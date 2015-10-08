@@ -15,7 +15,7 @@
 #include <windows.h>
 
 #define LOCTEXT_NAMESPACE "HydraPlugin"
-#define PLUGIN_VERSION "0.8.1"
+#define PLUGIN_VERSION "0.8.2"
 DEFINE_LOG_CATEGORY_STATIC(HydraPluginLog, Log, All);
 
 //Private API - This is where the magic happens
@@ -116,7 +116,6 @@ class FHydraController : public IInputDevice, public IMotionController
 public:
 	DataCollector *collector;
 	HydraDataDelegate* hydraDelegate;
-	bool shouldSendInputEvents;
 	void* DLLHandle;
 
 	/** handler to send all messages to */
@@ -129,14 +128,13 @@ public:
 	{
 		UE_LOG(HydraPluginLog, Log, TEXT("Attempting to startup Hydra Module, v%s"), TEXT(PLUGIN_VERSION));
 
-		//hydraDelegate = NULL;	//set this explicitly to stop cdcdcd... error
 		collector = new DataCollector;
 		hydraDelegate = new HydraDataDelegate;
 		hydraDelegate->HydraLatestData = collector->allDataUE;	//set the delegate latest data pointer
 		hydraDelegate->HydraHistoryData = collector->historicalDataUE;
 
 		//This is a fixed relative path, meaning this file needs to exist for the plugin to work, even in shipping build!
-		//Todo: automatically copy this file in the packaging process (how?).
+		//Todo: fix path lookup when packaged
 		//FString DllFilepath = FPaths::ConvertRelativePathToFull(FPaths::Combine(*FPaths::GameDir(),
 		//	TEXT("Plugins"), TEXT("HydraPlugin"), TEXT("Binaries/Win64")), TEXT("sixense_x64.dll"));
 
@@ -272,35 +270,13 @@ public:
 
 	virtual void Tick(float DeltaTime) override
 	{
-		//get the freshest data
-		int success = HydraGetAllNewestData(collector->allData);
-		if (success == SIXENSE_FAILURE){
-			UE_LOG(HydraPluginLog, Error, TEXT("Hydra Error! Failed to get freshest data."));
-			return;
-		}
-		//if the hydras are unavailable don't try to get more information
-		if (!collector->allDataUE->available){
-			UE_LOG(HydraPluginLog, Log, TEXT("Collector data not available."));
-			return;
-		}
-
-		//convert and pass the data to the delegate
-		collector->ConvertAllData(hydraDelegate->baseOffset);
-
-		//Modify by base offset
-
-
-		//Call the delegate once it has been set
-		if (hydraDelegate != NULL && shouldSendInputEvents)
-		{
-			DelegateTick(DeltaTime);
-		}
+		//Update Data History
+		DelegateUpdateAllData(DeltaTime);
 	}
 
 	virtual void SendControllerEvents() override
 	{
-		//Should be handled by 'Tick'
-		shouldSendInputEvents = true;
+		DelegateEventTick();
 	}
 
 
@@ -309,21 +285,7 @@ public:
 	{
 		bool RetVal = false;
 		
-		UHydraSingleController* controller = nullptr;
-
-		switch (DeviceHand)
-		{
-		case EControllerHand::Left:
-			controller = hydraDelegate->LeftController;
-
-			break;
-		case EControllerHand::Right:
-			controller = hydraDelegate->RightController;
-
-			break;
-		default:
-			break;
-		}
+		UHydraSingleController* controller = hydraDelegate->HydraControllerForControllerHand(DeviceHand);
 
 		if (controller != nullptr && !controller->docked)
 		{
@@ -353,9 +315,9 @@ public:
 
 private:
 	//Delegate Private functions
-	void DelegateUpdateAllData();
+	void DelegateUpdateAllData(float DeltaTime);
 	void DelegateCheckEnabledCount(bool* plugNotChecked);
-	void DelegateTick(float DeltaTime);
+	void DelegateEventTick();
 };
 
 
@@ -363,8 +325,24 @@ private:
 
 
 /** Delegate Functions, called by plugin to keep data in sync and to emit the events.*/
-void FHydraController::DelegateUpdateAllData()
+void FHydraController::DelegateUpdateAllData(float DeltaTime)
 {
+	//Get the freshest Data
+	int success = HydraGetAllNewestData(collector->allData);
+	if (success == SIXENSE_FAILURE){
+		UE_LOG(HydraPluginLog, Error, TEXT("Hydra Error! Failed to get freshest data."));
+		return;
+	}
+	//if the hydras are unavailable don't try to get more information
+	if (!collector->allDataUE->available){
+		UE_LOG(HydraPluginLog, Log, TEXT("Collector data not available."));
+		return;
+	}
+
+	//convert and pass the data to the delegate, this step also adds the base offset
+	collector->ConvertAllData(hydraDelegate->baseOffset);
+
+	//Update all historical links
 	hydraDelegate->HydraHistoryData[9] = hydraDelegate->HydraHistoryData[8];
 	hydraDelegate->HydraHistoryData[8] = hydraDelegate->HydraHistoryData[7];
 	hydraDelegate->HydraHistoryData[7] = hydraDelegate->HydraHistoryData[6];
@@ -374,7 +352,38 @@ void FHydraController::DelegateUpdateAllData()
 	hydraDelegate->HydraHistoryData[3] = hydraDelegate->HydraHistoryData[2];
 	hydraDelegate->HydraHistoryData[2] = hydraDelegate->HydraHistoryData[1];
 	hydraDelegate->HydraHistoryData[1] = hydraDelegate->HydraHistoryData[0];
-	//NB: HydraHistoryData[0] = *HydraLatestData gets updated after the tick to take in integrated data
+
+	//Add in all the integrated data (acceleration/velocity etc)
+	sixenseControllerDataUE* controller;
+	sixenseControllerDataUE* previous;
+
+	float DeltaSquared = (DeltaTime*DeltaTime);
+
+	for (int i = 0; i < MAX_CONTROLLERS_SUPPORTED; i++)
+	{
+		controller = &hydraDelegate->HydraLatestData->controllers[i];
+		previous = &hydraDelegate->HydraHistoryData[0].controllers[i];
+
+		//Trigger 
+		if (controller->trigger < 0.5)
+		{
+			controller->trigger_pressed = false;
+		}
+		else{
+			controller->trigger_pressed = true;
+		}
+
+		//Calculate Velocity, Acceleration, and angular velocity
+		controller->velocity = (controller->position - previous->position) / DeltaTime;
+		controller->acceleration = (controller->velocity - previous->velocity) / DeltaTime;
+		controller->angular_velocity = FRotator(controller->quat - previous->quat);	//unscaled by delta time	
+		controller->angular_velocity = FRotator(controller->angular_velocity.Pitch / DeltaSquared,
+			controller->angular_velocity.Yaw / DeltaSquared,
+			controller->angular_velocity.Roll / DeltaSquared);	//has to be scaled here to avoid clamping in the quaternion initialization
+	}
+
+	//Update the stored data with the integrated data obtained from latest
+	hydraDelegate->HydraHistoryData[0] = *hydraDelegate->HydraLatestData;
 }
 
 void FHydraController::DelegateCheckEnabledCount(bool* plugNotChecked)
@@ -405,11 +414,8 @@ float MotionInputMappingConversion(float AxisValue){
 }
 
 /** Internal Tick - Called by the Plugin */
-void FHydraController::DelegateTick(float DeltaTime)
+void FHydraController::DelegateEventTick()
 {
-	//Update Data History
-	DelegateUpdateAllData();
-
 	sixenseControllerDataUE* controller;
 	sixenseControllerDataUE* previous;
 	bool plugNotChecked = true;
@@ -418,7 +424,7 @@ void FHydraController::DelegateTick(float DeltaTime)
 	for (int i = 0; i < MAX_CONTROLLERS_SUPPORTED; i++)
 	{
 		controller = &hydraDelegate->HydraLatestData->controllers[i];
-		previous = &hydraDelegate->HydraHistoryData[0].controllers[i];
+		previous = &hydraDelegate->HydraHistoryData[1].controllers[i];
 
 		//Sync any extended data forms such as HydraSingleController, so that the correct instance values are sent and not 1 frame delayed
 		hydraDelegate->UpdateControllerReference(controller, i);
@@ -460,15 +466,6 @@ void FHydraController::DelegateTick(float DeltaTime)
 			}
 
 			//** Buttons */
-
-			//Trigger 
-			if (controller->trigger < 0.5)
-			{
-				controller->trigger_pressed = false;
-			}
-			else{
-				controller->trigger_pressed = true;
-			}
 
 			if (controller->trigger != previous->trigger)
 			{
@@ -794,21 +791,9 @@ void FHydraController::DelegateTick(float DeltaTime)
 					EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Right_Thumbstick_X, controller->joystick.X, 0, 0);
 					EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Right_Thumbstick_Y, controller->joystick.Y, 0, 0);
 				}
-
-				//axis test
-				//FSlateApplication::Get().on
 			}
 
 			//Controller
-
-			//Calculate Velocity, Acceleration, and angular velocity
-			controller->velocity = (controller->position - previous->position) / DeltaTime;
-			controller->acceleration = (controller->velocity - previous->velocity) / DeltaTime;
-			controller->angular_velocity = FRotator(controller->quat - previous->quat);	//unscaled by delta time
-			float DeltaSquared = (DeltaTime*DeltaTime);
-			controller->angular_velocity = FRotator(controller->angular_velocity.Pitch / DeltaSquared,
-				controller->angular_velocity.Yaw / DeltaSquared,
-				controller->angular_velocity.Roll / DeltaSquared);	//has to be scaled here to avoid clamping in the quaternion initialization
 
 			if (!controller->is_docked){
 				FRotator rotation = FRotator(controller->rotation);
@@ -851,9 +836,6 @@ void FHydraController::DelegateTick(float DeltaTime)
 			}
 		}
 	}//end controller for loop
-
-	//Update the stored data with the integrated data obtained from latest
-	hydraDelegate->HydraHistoryData[0] = *hydraDelegate->HydraLatestData;
 }
 
 //Implementing the module, required

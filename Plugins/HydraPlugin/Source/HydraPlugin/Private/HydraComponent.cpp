@@ -10,7 +10,6 @@ UHydraPluginComponent::UHydraPluginComponent(const FObjectInitializer &init) : U
 {
 	bWantsInitializeComponent = true;
 	bAutoActivate = true;
-	//PrimaryComponentTick.bCanEverTick = true;	//the component automatically ticks so we don't have to
 }
 
 void UHydraPluginComponent::InitializeComponent()
@@ -31,6 +30,60 @@ void UHydraPluginComponent::UninitializeComponent()
 	Super::UninitializeComponent();
 }
 
+void UHydraPluginComponent::SetMeshComponentLinks(UMeshComponent* PassedLeftMesh, UMeshComponent* PassedRightMesh)
+{
+	LeftMeshComponent = PassedLeftMesh;
+	RightMeshComponent = PassedRightMesh;
+}
+
+void UHydraPluginComponent::Docked(UHydraSingleController* controller)
+{
+	//Check possession and auto-hide if enabled
+	if (HideMeshComponentsWhenDocked)
+	{
+		switch (controller->handPossession)
+		{
+		case HYDRA_HAND_LEFT:
+			if (LeftMeshComponent != nullptr)
+				LeftMeshComponent->SetHiddenInGame(true);
+			break;
+		case HYDRA_HAND_RIGHT:
+			if (RightMeshComponent != nullptr)
+				RightMeshComponent->SetHiddenInGame(true);
+			break;
+		default:
+			break;
+		}
+	}
+
+	//Emit our multi-cast delegate
+	ControllerDocked.Broadcast(controller);
+}
+
+void UHydraPluginComponent::Undocked(UHydraSingleController* controller)
+{
+	//Check possession and auto-hide if enabled
+	if (HideMeshComponentsWhenDocked){
+
+		switch (controller->handPossession)
+		{
+		case HYDRA_HAND_LEFT:
+			if (LeftMeshComponent != nullptr)
+				LeftMeshComponent->SetHiddenInGame(false);
+			break;
+		case HYDRA_HAND_RIGHT:
+			if (RightMeshComponent != nullptr)
+				RightMeshComponent->SetHiddenInGame(false);
+			break;
+		default:
+			break;
+		}
+	}
+
+	//Emit our multi-cast delegate
+	ControllerUndocked.Broadcast(controller);
+}
+
 //Utility Functions
 bool UHydraPluginComponent::IsAvailable()
 {
@@ -39,7 +92,6 @@ bool UHydraPluginComponent::IsAvailable()
 
 UHydraSingleController* UHydraPluginComponent::GetHistoricalFrameForControllerId(int32 controllerId, int32 historyIndex)
 {
-	//return HydraGetHistoricalFrames(controllerId, historyIndex);
 	sixenseControllerDataUE* dataUE = dataDelegate->HydraGetHistoricalData(controllerId, historyIndex);
 
 	UHydraSingleController* controller = NewObject<UHydraSingleController>(UHydraSingleController::StaticClass());
@@ -54,10 +106,15 @@ UHydraSingleController* UHydraPluginComponent::GetLatestFrameForControllerId(int
 }
 
 //Public Implementation
-
-UHydraSingleController* UHydraPluginComponent::GetLatestFrameForHand(HydraControllerHand hand)
+//Frames
+UHydraSingleController* UHydraPluginComponent::GetHistoricalFrameForHand(EHydraControllerHand hand, int32 historyIndex)
 {
-	return GetHistoricalFrameForControllerId(ControllerIdForHand(hand), 0);
+	return GetHistoricalFrameForControllerId(ControllerIdForHand(hand), historyIndex);
+}
+
+UHydraSingleController* UHydraPluginComponent::GetLatestFrameForHand(EHydraControllerHand hand)
+{
+	return GetHistoricalFrameForHand(hand, 0);
 }
 
 //Calibration
@@ -72,13 +129,8 @@ void UHydraPluginComponent::Calibrate(FVector OffsetFromShouldMidPoint)
 	dataDelegate->baseOffset = -(dataDelegate->LeftController->rawPosition + dataDelegate->RightController->rawPosition) / 2 + OffsetFromShouldMidPoint;
 }
 
-//Frames
-UHydraSingleController* UHydraPluginComponent::GetHistoricalFrameForHand(HydraControllerHand hand, int32 historyIndex)
-{
-	return GetHistoricalFrameForControllerId(ControllerIdForHand(hand), historyIndex);
-}
-
-int32 UHydraPluginComponent::ControllerIdForHand(HydraControllerHand hand)
+//Determining Hand
+int32 UHydraPluginComponent::ControllerIdForHand(EHydraControllerHand hand)
 {
 	switch (hand)
 	{

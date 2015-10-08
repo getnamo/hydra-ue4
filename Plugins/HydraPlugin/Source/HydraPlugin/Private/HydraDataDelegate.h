@@ -1,6 +1,7 @@
 #pragma once
 
 #include "HydraEnum.h"
+#include "IMotionController.h"
 
 class UHydraSingleController;
 class UHydraPluginComponent;
@@ -13,6 +14,7 @@ public:
 	~HydraDataDelegate();
 	
 	//Namespace Hydra for variables, functions and events.
+
 
 	//Controller short-hands
 	UHydraSingleController* LeftController = nullptr;
@@ -48,8 +50,8 @@ public:
 	virtual void HydraDocked(int32 controller);
 	virtual void HydraUndocked(int32 controller);
 
-	virtual void HydraButtonPressed(int32 controller, HydraControllerButton button);
-	virtual void HydraButtonReleased(int32 controller, HydraControllerButton button);
+	virtual void HydraButtonPressed(int32 controller, EHydraControllerButton button);
+	virtual void HydraButtonReleased(int32 controller, EHydraControllerButton button);
 	virtual void HydraB1Pressed(int32 controller);
 	virtual void HydraB1Released(int32 controller);
 	virtual void HydraB2Pressed(int32 controller);
@@ -77,8 +79,10 @@ public:
 
 	//** Callable Functions (for public polling support) */
 	virtual bool HydraIsAvailable();
-	virtual HydraControllerHand HydraWhichHand(int32 controllerId);	//call to determine which hand the controller is held in. Determined and reset on controller docking.
+	virtual EHydraControllerHand HydraWhichHand(int32 controllerId);	//call to determine which hand the controller is held in. Determined and reset on controller docking.
 	virtual UHydraSingleController* HydraControllerForID(int32 controllerId);
+	virtual UHydraSingleController* HydraControllerForControllerHand(EControllerHand hand);
+	virtual UHydraSingleController* HydraControllerForHydraHand(EHydraControllerHand hand);
 	virtual sixenseControllerDataUE* HydraGetLatestData(int32 controllerId);
 	virtual sixenseControllerDataUE* HydraGetHistoricalData(int32 controllerId, int32 historyIndex);
 
