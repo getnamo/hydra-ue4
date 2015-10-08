@@ -272,11 +272,11 @@ public:
 	{
 		//Update Data History
 		DelegateUpdateAllData(DeltaTime);
+		DelegateEventTick();	//does SendControllerEvents not get late sampled?
 	}
 
 	virtual void SendControllerEvents() override
 	{
-		DelegateEventTick();
 	}
 
 
