@@ -50,6 +50,7 @@ You can also set links to the MeshComponents attached to your MotionControllerCo
 Just call SetMeshComponentLinks at some initialization stage e.g. BeginPlay and then check the option to HideMeshComponentsWhenDocked
 
 
+
 How about events? Now there are no more interfaces to deal with, instead you click on your hydra plugin component and click the green + to add the event from the details pane. This should feel familiar as these are the same blueprint assignable multicast delegates that PrimitiveComponents use for collision checks (e.g. OnBeginOverlap)
 
 ![IMG](http://i.imgur.com/YpEA2da.png)
