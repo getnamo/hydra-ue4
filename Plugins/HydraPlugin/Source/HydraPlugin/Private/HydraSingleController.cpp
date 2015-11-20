@@ -1,5 +1,4 @@
 #include "HydraPluginPrivatePCH.h"
-#include "HydraDelegate.h"
 #include "HydraSingleController.h"
 #include <sixense.h>
 
@@ -9,17 +8,18 @@ UHydraSingleController::UHydraSingleController(const FObjectInitializer &init) :
 
 bool UHydraSingleController::isLeftHand()
 {
-	return handPossession == HydraControllerHand::HYDRA_HAND_LEFT;
+	return handPossession == EHydraControllerHand::HYDRA_HAND_LEFT;
 }
 
 bool UHydraSingleController::isRightHand()
 {
-	return handPossession == HydraControllerHand::HYDRA_HAND_RIGHT;
+	return handPossession == EHydraControllerHand::HYDRA_HAND_RIGHT;
 }
 
 void UHydraSingleController::setFromSixenseDataUE(sixenseControllerDataUE* data)
 {
 	this->position = data->position;
+	this->rawPosition = data->rawPosition;
 	this->velocity = data->velocity;
 	this->acceleration = data->acceleration;
 	
@@ -40,5 +40,5 @@ void UHydraSingleController::setFromSixenseDataUE(sixenseControllerDataUE* data)
 	this->trigger = data->trigger;
 	this->docked = data->is_docked;
 
-	this->handPossession = (HydraControllerHand)data->which_hand;
+	this->handPossession = (EHydraControllerHand)data->which_hand;
 }

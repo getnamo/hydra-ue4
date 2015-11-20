@@ -1,6 +1,6 @@
 #pragma once
 
-#include "HydraDelegate.h"
+#include "HydraEnum.h"
 #include "HydraSingleController.generated.h"
 
 UCLASS(BlueprintType)
@@ -14,6 +14,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hydra Frame")
 	FVector position;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hydra Frame")
+	FVector rawPosition;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hydra Frame")
 	FVector velocity;
@@ -61,7 +64,7 @@ public:
 	bool docked;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hydra Frame")
-	TEnumAsByte<HydraControllerHand> handPossession;
+	TEnumAsByte<EHydraControllerHand> handPossession;
 
 	//Convenience Call, optionally check hand possession property
 	UFUNCTION(BlueprintCallable, Category = "Hydra Frame")

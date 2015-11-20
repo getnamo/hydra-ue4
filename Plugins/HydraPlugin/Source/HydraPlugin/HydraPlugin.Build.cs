@@ -13,7 +13,12 @@ namespace UnrealBuildTool.Rules
 
         private string ThirdPartyPath
         {
-            get { return Path.GetFullPath(Path.Combine(ModulePath, "../../ThirdParty/")); }
+            get { return Path.GetFullPath(Path.Combine(ModulePath, "../ThirdParty/")); }
+        }
+
+        private string ThirdPartyBinariesPath
+        {
+            get { return Path.Combine(ThirdPartyPath, "Sixense", "Binaries"); }
         }
 
 		public HydraPlugin(TargetInfo Target)
@@ -21,15 +26,12 @@ namespace UnrealBuildTool.Rules
 			PublicIncludePaths.AddRange(
 				new string[] {
                     "HydraPlugin/Public",
-					// ... add public include paths required here ...
 				}
 				);
 
 			PrivateIncludePaths.AddRange(
 				new string[] {
 					"HydraPlugin/Private",
-                    //"../../ThirdParty/Sixense/Include"
-					// ... add other private include paths required here ...
 				}
 				);
 
@@ -40,6 +42,9 @@ namespace UnrealBuildTool.Rules
 					"CoreUObject",
                     "Engine",
                     "InputCore",
+                    "InputDevice",
+                    "HeadMountedDisplay",
+                    "Projects",
                     "Slate",
                     "SlateCore"
 					// ... add other public dependencies that you statically link with here ...
@@ -61,6 +66,9 @@ namespace UnrealBuildTool.Rules
 				);
 
             LoadHydraLib(Target);
+
+            //Add DLL for packaging
+
 		}
 
         public bool LoadHydraLib(TargetInfo Target)
@@ -75,7 +83,19 @@ namespace UnrealBuildTool.Rules
                 string LibrariesPath = Path.Combine(ThirdPartyPath, "Sixense", "Lib");
 
                 //Lib based bind unsupported due to sixense wrong lib version compile, limiting platforms to windows 32/64
+                //We use a direct dll bind, with data format from .lib
                 //PublicAdditionalLibraries.Add(Path.Combine(LibrariesPath, "sixense_s_" + PlatformString + ".lib"));
+
+                if (Target.Platform == UnrealTargetPlatform.Win64)
+                {
+                    PublicDelayLoadDLLs.Add(Path.Combine(ThirdPartyBinariesPath, "Win64", "sixense_x64.dll"));
+                    RuntimeDependencies.Add(new RuntimeDependency(Path.Combine(ThirdPartyBinariesPath, "Win64","sixense_x64.dll")));
+                }
+                else
+                {
+                    PublicDelayLoadDLLs.Add(Path.Combine(ThirdPartyBinariesPath, "Win32", "sixense.dll"));
+                    RuntimeDependencies.Add(new RuntimeDependency(Path.Combine(ThirdPartyBinariesPath, "Win32", "sixense.dll")));
+                }
             }
 
             if (isLibrarySupported)
@@ -84,7 +104,6 @@ namespace UnrealBuildTool.Rules
                 PublicIncludePaths.Add(Path.Combine(ThirdPartyPath, "Sixense", "Include"));
             }
 
-            //Definitions.Add(string.Format("WITH_HYDRA_BINDING={0}", isLibrarySupported ? 1 : 0));
 
             return isLibrarySupported;
         }

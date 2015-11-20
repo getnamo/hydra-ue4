@@ -3,13 +3,14 @@
 #pragma once
 
 #include "ModuleManager.h"
+#include "IInputDeviceModule.h"
 
-class HydraDelegate;
+class HydraDataDelegate;
 
 /**
  * The public interface to this module
  */
-class IHydraPlugin : public IModuleInterface
+class IHydraPlugin : public IInputDeviceModule
 {
 
 public:
@@ -35,11 +36,6 @@ public:
 		return FModuleManager::Get().IsModuleLoaded( "HydraPlugin" );
 	}
 
-	/**
-	 * Public API, implemented in FHydraPlugin.cpp
-	 * Required API called by HydraDelegate via HydraStartup() and HydraTick(float);
-	 */
-	virtual void HydraTick(float DeltaTime) {};
-	virtual void SetDelegate(HydraDelegate* newDelegate) {};
+	virtual HydraDataDelegate* DataDelegate(){ return nullptr; };
 };
 
