@@ -6,6 +6,7 @@
 #include "IInputDeviceModule.h"
 
 class HydraDataDelegate;
+class UHydraPluginComponent;
 
 /**
  * The public interface to this module
@@ -37,5 +38,6 @@ public:
 	}
 
 	virtual HydraDataDelegate* DataDelegate(){ return nullptr; };
+	virtual void DeferedAddDelegate(UHydraPluginComponent* delegate) {};
 };
 

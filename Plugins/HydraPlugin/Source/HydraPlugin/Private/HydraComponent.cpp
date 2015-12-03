@@ -17,9 +17,15 @@ void UHydraPluginComponent::InitializeComponent()
 	Super::InitializeComponent();
 
 	//Attach delegate references
-	dataDelegate = IHydraPlugin::Get().DataDelegate();
-	dataDelegate->AddEventDelegate(this);
+	//dataDelegate = IHydraPlugin::Get().DataDelegate();
+	//dataDelegate->AddEventDelegate(this);
+	IHydraPlugin::Get().DeferedAddDelegate(this);
 }
+
+void UHydraPluginComponent::SetDataDelegate(HydraDataDelegate* data) {
+	dataDelegate = data;
+}
+
 
 void UHydraPluginComponent::UninitializeComponent()
 {
