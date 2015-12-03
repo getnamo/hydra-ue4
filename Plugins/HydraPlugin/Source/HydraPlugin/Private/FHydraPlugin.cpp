@@ -845,6 +845,7 @@ class FHydraPlugin : public IHydraPlugin
 {
 	FHydraController* controllerReference = nullptr;
 	TArray<UHydraPluginComponent*> delegateComponents;
+	bool inputDeviceCreated = false;
 
 	virtual TSharedPtr< class IInputDevice > CreateInputDevice(const TSharedRef< FGenericApplicationMessageHandler >& InMessageHandler) override
 	{
@@ -854,6 +855,9 @@ class FHydraPlugin : public IHydraPlugin
 			controllerReference->hydraDelegate->AddEventDelegate(actorComponent);
 			actorComponent->SetDataDelegate(controllerReference->hydraDelegate);
 		}
+		delegateComponents.Empty();
+		inputDeviceCreated = true;
+
 		return TSharedPtr< class IInputDevice >(controllerReference);
 	}
 
@@ -864,7 +868,16 @@ class FHydraPlugin : public IHydraPlugin
 
 	virtual void DeferedAddDelegate(UHydraPluginComponent* delegate) override
 	{
+		if (inputDeviceCreated) 
+		{
+			controllerReference->hydraDelegate->AddEventDelegate(delegate);
+			delegate->SetDataDelegate(controllerReference->hydraDelegate);
+		}
+		else 
+		{
+			// defer until later
 		delegateComponents.Add(delegate);
+		}
 	}
 
 };
