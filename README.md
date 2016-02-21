@@ -12,7 +12,7 @@ The plugin also handles hot plugging and emits HydraPluggedIn (HydraUnplugged fo
 
 ## Quick Install & Setup ##
 
- 1.	Download
+ 1.	[Download Latest Release](https://github.com/getnamo/hydra-ue4/releases)
  2.	Create new or choose project.
  3.	Browse to your project folder (typically found at Documents/Unreal Project/{Your Project Root})
  4.	Copy *Plugins* folder into your Project root.
