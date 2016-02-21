@@ -7,6 +7,7 @@
 #include "HydraSingleController.h"
 #include "SlateBasics.h"
 #include "IPluginManager.h"
+#include "HydraComponent.h"
 
 #include <iostream>
 #include <stdexcept>
@@ -843,10 +844,20 @@ void FHydraController::DelegateEventTick()
 class FHydraPlugin : public IHydraPlugin
 {
 	FHydraController* controllerReference = nullptr;
+	TArray<UHydraPluginComponent*> delegateComponents;
+	bool inputDeviceCreated = false;
 
 	virtual TSharedPtr< class IInputDevice > CreateInputDevice(const TSharedRef< FGenericApplicationMessageHandler >& InMessageHandler) override
 	{
 		controllerReference = new FHydraController(InMessageHandler);
+		// Add defered delegates
+		for (auto& actorComponent : delegateComponents) {
+			controllerReference->hydraDelegate->AddEventDelegate(actorComponent);
+			actorComponent->SetDataDelegate(controllerReference->hydraDelegate);
+		}
+		delegateComponents.Empty();
+		inputDeviceCreated = true;
+
 		return TSharedPtr< class IInputDevice >(controllerReference);
 	}
 
@@ -854,6 +865,21 @@ class FHydraPlugin : public IHydraPlugin
 	{
 		return controllerReference->hydraDelegate;
 	}
+
+	virtual void DeferedAddDelegate(UHydraPluginComponent* delegate) override
+	{
+		if (inputDeviceCreated) 
+		{
+			controllerReference->hydraDelegate->AddEventDelegate(delegate);
+			delegate->SetDataDelegate(controllerReference->hydraDelegate);
+		}
+		else 
+		{
+			// defer until later
+		delegateComponents.Add(delegate);
+		}
+	}
+
 };
 
 //Second parameter needs to be called the same as the Module name or packaging will fail

@@ -4,6 +4,8 @@
 #include "HydraEnum.h"
 #include "HydraComponent.generated.h"
 
+class HydraDataDelegate;
+
 //These macros cannot be multi-line or it will not compile
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FHydraPluggedInSignature);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FHydraUnPluggedSignature);
@@ -80,6 +82,8 @@ public:
 	// For T-pose the function defaults to 40cm height. At 0,0,0 this will simply calibrate the zero position
 	UFUNCTION(BlueprintCallable, Category = HydraFunctions)
 	void Calibrate(FVector OffsetFromShoulderMidPoint = FVector(0,0,40));
+
+	void SetDataDelegate(HydraDataDelegate* delegate);
 
 
 protected:
