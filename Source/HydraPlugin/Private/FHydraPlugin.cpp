@@ -30,6 +30,35 @@ dll_sixenseInit HydraInit;
 dll_sixenseExit HydraExit;
 dll_sixenseGetAllNewestData HydraGetAllNewestData;
 
+class HydraUtilityTimer
+{
+	int64 TickTime = 0;
+	int64 TockTime = 0;
+public:
+	HydraUtilityTimer()
+	{
+		tick();
+	}
+
+	double unixTimeNow()
+	{
+		FDateTime timeUtc = FDateTime::UtcNow();
+		return timeUtc.ToUnixTimestamp() * 10000 + timeUtc.GetMillisecond();
+	}
+
+	void tick()
+	{
+		TickTime = unixTimeNow();
+	}
+
+	//return time elapsed in seconds
+	float tock()
+	{
+		TockTime = unixTimeNow();
+		return (TockTime - TickTime)/1000.f;
+	}
+};
+
 //UE v4.6 IM event wrappers
 bool EmitKeyUpEventForKey(FKey key, int32 user, bool repeat)
 {
@@ -118,6 +147,7 @@ public:
 	DataCollector *collector;
 	HydraDataDelegate* hydraDelegate;
 	void* DLLHandle;
+	HydraUtilityTimer UtilityTimer;
 
 	/** handler to send all messages to */
 	TSharedRef<FGenericApplicationMessageHandler> MessageHandler;
@@ -273,12 +303,14 @@ public:
 	{
 		//Update Data History
 		DelegateUpdateAllData(DeltaTime);
-		DelegateEventTick();	//does SendControllerEvents not get late sampled?
+		DelegateEventTick();
 	}
 
 	virtual void SendControllerEvents() override
 	{
-		//DelegateEventTick();	//does SendControllerEvents not get late sampled?
+		//Use late sampling attached to SendControllerEvents
+		DelegateUpdateAllData(-1.f);	//-1 signifies we should use our internal utility timer for elapsed time
+		DelegateEventTick();
 	}
 
 
@@ -343,6 +375,15 @@ private:
 /** Delegate Functions, called by plugin to keep data in sync and to emit the events.*/
 void FHydraController::DelegateUpdateAllData(float DeltaTime)
 {
+	//Tick-tock the timer
+	float timeElapsedSinceUpdate = UtilityTimer.tock();
+	UtilityTimer.tick();
+
+	if (DeltaTime < 0) 
+	{
+		DeltaTime = timeElapsedSinceUpdate;
+	}
+
 	//Get the freshest Data
 	int success = HydraGetAllNewestData(collector->allData);
 	if (success == SIXENSE_FAILURE){
