@@ -17,7 +17,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHydraJoystickMovedSignature, class
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_SixParams(FHydraControllerMovedSignature, class UHydraSingleController*, controller, FVector, position, FVector, velocity, FVector, acceleration, FRotator, orientation, FRotator, angularVelocity);
 
 UCLASS(ClassGroup="Input Controller", meta=(BlueprintSpawnableComponent))
-class UHydraPluginComponent : public UActorComponent
+class HYDRAPLUGIN_API UHydraPluginComponent : public UActorComponent
 {
 	GENERATED_UCLASS_BODY()
 public:

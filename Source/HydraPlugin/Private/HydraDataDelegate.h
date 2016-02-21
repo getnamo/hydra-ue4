@@ -6,7 +6,7 @@
 class UHydraSingleController;
 class UHydraPluginComponent;
 
-class HydraDataDelegate
+class HYDRAPLUGIN_API HydraDataDelegate
 {
 	friend class FHydraController;
 public:

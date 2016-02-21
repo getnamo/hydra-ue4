@@ -16,7 +16,7 @@
 #include <windows.h>
 
 #define LOCTEXT_NAMESPACE "HydraPlugin"
-#define PLUGIN_VERSION "0.8.3"
+#define PLUGIN_VERSION "0.8.4"
 DEFINE_LOG_CATEGORY_STATIC(HydraPluginLog, Log, All);
 
 //Private API - This is where the magic happens
@@ -281,6 +281,20 @@ public:
 		//DelegateEventTick();	//does SendControllerEvents not get late sampled?
 	}
 
+
+	virtual ETrackingStatus GetControllerTrackingStatus(const int32 ControllerIndex, const EControllerHand DeviceHand) const
+	{
+		UHydraSingleController* controller = hydraDelegate->HydraControllerForControllerHand(DeviceHand);
+
+		if (controller != nullptr && !controller->docked)
+		{
+			return ETrackingStatus::Tracked;
+		}
+		else
+		{
+			return ETrackingStatus::NotTracked;
+		}
+	}
 
 	//Hydra only supports one player so ControllerIndex is ignored.
 	virtual bool GetControllerOrientationAndPosition(const int32 ControllerIndex, const EControllerHand DeviceHand, FRotator& OutOrientation, FVector& OutPosition) const
