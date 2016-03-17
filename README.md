@@ -1,22 +1,15 @@
-## Overview ##
+## VR Editor Branch Instructions
 
-An Unofficial Razer Hydra Plugin for the Unreal Engine 4
+Instructions:
 
-The plugin is designed with an event driven architecture through a delegate interface. You can access device events through Blueprintable classes provided or through C++. Main C++ support is from inheriting the HydraDelegate, through it you can extend your own custom class to support Hydra events. Additional functions in the delegate support polling for latest data.
+ 1.	[Download VREditor Release](https://github.com/getnamo/hydra-ue4/releases)
+ 2.	Browse to your cloned [engine root folder](https://github.com/EpicGames/UnrealEngine/tree/dev-vr-editor). Drag and drop *Engine* which contains the plugin there.
+ 3.    Compile and run the editor!
+ 4.    Press VR button to enter VR editor mode. If you need to calibrate the base offset, Drag and drop HydraCalibrateActor into the scene and press start on either hydra controller.
 
-The plugin also handles hot plugging and emits HydraPluggedIn (HydraUnplugged for the reverse), allowing you to initialize if needed when the device is ready.
 
-[Main discussion thread](https://forums.unrealengine.com/showthread.php?3505-Razer-Hydra-Plugin)
+![IMG](http://i.imgur.com/aIMygUi.png)
 
-[Unreal Engine Wiki](https://wiki.unrealengine.com/Unofficial_Hydra_Plugin)
-
-## Quick Install & Setup ##
-
- 1.	[Download Latest Release](https://github.com/getnamo/hydra-ue4/releases)
- 2.	Create new or choose project.
- 3.	Browse to your project folder (typically found at Documents/Unreal Project/{Your Project Root})
- 4.	Copy *Plugins* folder into your Project root.
- 5.	Restart the Editor and open your project again. Plugin is now ready to use.
 
 ## Motion Controller Documentation ##
 
