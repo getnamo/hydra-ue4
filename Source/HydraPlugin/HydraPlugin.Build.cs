@@ -32,7 +32,7 @@ namespace UnrealBuildTool.Rules
 			PrivateIncludePaths.AddRange(
 				new string[] {
 					"HydraPlugin/Private",
-				}
+                }
 				);
 
 			PublicDependencyModuleNames.AddRange(
@@ -54,6 +54,7 @@ namespace UnrealBuildTool.Rules
 			PrivateDependencyModuleNames.AddRange(
 				new string[]
 				{
+                    "UnrealEd"
 					// ... add private dependencies that you statically link with here ...
 				}
 				);

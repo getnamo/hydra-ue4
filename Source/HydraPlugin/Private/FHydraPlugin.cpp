@@ -1,4 +1,5 @@
 #include "HydraPluginPrivatePCH.h"
+#include "UnrealEd.h"
 
 #include "IHydraPlugin.h"
 #include "IMotionController.h"
@@ -16,7 +17,7 @@
 #include <windows.h>
 
 #define LOCTEXT_NAMESPACE "HydraPlugin"
-#define PLUGIN_VERSION "0.8.5"
+#define PLUGIN_VERSION "0.8.6"
 DEFINE_LOG_CATEGORY_STATIC(HydraPluginLog, Log, All);
 
 //Private API - This is where the magic happens
@@ -293,6 +294,20 @@ public:
 		}
 	}
 
+	//if you're in editor get the editor world scale, otherwise use the game world scale
+	float GetWorldScale() const
+	{
+		if (GEditor != nullptr && GEditor->GetEditorWorldContext().World() != nullptr) 
+		{
+			return GEditor->GetEditorWorldContext().World()->GetWorldSettings()->WorldToMeters;
+		}
+		else if (GEngine != nullptr && GEngine->GetWorld() != nullptr)
+		{
+			return GEngine->GetWorld()->GetWorldSettings()->WorldToMeters;
+		}
+		return 100.f;
+	}
+
 	//Hydra only supports one player so ControllerIndex is ignored.
 	virtual bool GetControllerOrientationAndPosition(const int32 ControllerIndex, const EControllerHand DeviceHand, FRotator& OutOrientation, FVector& OutPosition) const
 	{
@@ -303,7 +318,7 @@ public:
 		if (controller != nullptr && !controller->docked)
 		{
 			OutOrientation = controller->orientation;
-			OutPosition = controller->position;
+			OutPosition = controller->position * (GetWorldScale() / 100.f);
 			RetVal = true;
 		}
 
@@ -719,12 +734,16 @@ void FHydraController::DelegateEventTick()
 					if (leftHand)
 					{
 						EmitKeyDownEventForKey(EKeysHydra::HydraLeftStart, 0, 0);
-						EmitKeyDownEventForKey(FGamepadKeyNames::MotionController_Left_FaceButton5, 0, 0);	//map start to button 5
+
+						EmitKeyDownEventForKey(FGamepadKeyNames::MotionController_Left_Grip1, 0, 0);			//VR-Editor temporary work around to Grip1
+						//EmitKeyDownEventForKey(FGamepadKeyNames::MotionController_Left_FaceButton5, 0, 0);	//map start to button 5
 					}
 					else
 					{
 						EmitKeyDownEventForKey(EKeysHydra::HydraRightStart, 0, 0);
-						EmitKeyDownEventForKey(FGamepadKeyNames::MotionController_Right_FaceButton5, 0, 0);	//map start to button 5
+						
+						EmitKeyDownEventForKey(FGamepadKeyNames::MotionController_Right_Grip1, 0, 0);			//VR-Editor temporary work around to Grip1
+						//EmitKeyDownEventForKey(FGamepadKeyNames::MotionController_Right_FaceButton5, 0, 0);	//map start to button 5
 					}
 				}
 				else{
@@ -734,12 +753,17 @@ void FHydraController::DelegateEventTick()
 					if (leftHand)
 					{
 						EmitKeyUpEventForKey(EKeysHydra::HydraLeftStart, 0, 0);
-						EmitKeyUpEventForKey(FGamepadKeyNames::MotionController_Left_FaceButton5, 0, 0);	//map start to button 5
+
+						EmitKeyUpEventForKey(FGamepadKeyNames::MotionController_Left_Grip1, 0, 0);			//VR-Editor temporary work around to Grip1
+						//EmitKeyUpEventForKey(FGamepadKeyNames::MotionController_Left_FaceButton5, 0, 0);	//map start to button 5
 					}
 					else
 					{
+						
 						EmitKeyUpEventForKey(EKeysHydra::HydraRightStart, 0, 0);
-						EmitKeyUpEventForKey(FGamepadKeyNames::MotionController_Right_FaceButton5, 0, 0);	//map start to button 5
+
+						EmitKeyUpEventForKey(FGamepadKeyNames::MotionController_Right_Grip1, 0, 0);			//VR-Editor temporary work around to Grip1
+						//EmitKeyUpEventForKey(FGamepadKeyNames::MotionController_Right_FaceButton5, 0, 0);	//map start to button 5
 					}
 				}
 			}
@@ -755,12 +779,16 @@ void FHydraController::DelegateEventTick()
 					if (leftHand)
 					{
 						EmitKeyDownEventForKey(EKeysHydra::HydraLeftJoystickClick, 0, 0);
-						EmitKeyDownEventForKey(FGamepadKeyNames::MotionController_Left_FaceButton6, 0, 0);	//map joystick click to button 6
+
+						EmitKeyDownEventForKey(FGamepadKeyNames::SpecialLeft, 0, 0);							//VR-Editor temporary work
+						//EmitKeyDownEventForKey(FGamepadKeyNames::MotionController_Left_FaceButton6, 0, 0);	//map joystick click to button 6
 					}
 					else
 					{
 						EmitKeyDownEventForKey(EKeysHydra::HydraRightJoystickClick, 0, 0);
-						EmitKeyDownEventForKey(FGamepadKeyNames::MotionController_Right_FaceButton6, 0, 0);	//map joystick click to button 6
+
+						EmitKeyDownEventForKey(FGamepadKeyNames::SpecialRight, 0, 0);							//VR-Editor temporary work
+						//EmitKeyDownEventForKey(FGamepadKeyNames::MotionController_Right_FaceButton6, 0, 0);	//map joystick click to button 6
 					}
 				}
 				else{
@@ -770,11 +798,15 @@ void FHydraController::DelegateEventTick()
 					if (leftHand)
 					{
 						EmitKeyUpEventForKey(EKeysHydra::HydraLeftJoystickClick, 0, 0);
+
+						EmitKeyUpEventForKey(FGamepadKeyNames::SpecialLeft, 0, 0);							//VR-Editor temporary work
 						EmitKeyUpEventForKey(FGamepadKeyNames::MotionController_Left_FaceButton6, 0, 0);	//map joystick click to button 6
 					}
 					else
 					{
 						EmitKeyUpEventForKey(EKeysHydra::HydraRightJoystickClick, 0, 0);
+
+						EmitKeyUpEventForKey(FGamepadKeyNames::SpecialRight, 0, 0);							//vr workaround
 						EmitKeyUpEventForKey(FGamepadKeyNames::MotionController_Right_FaceButton6, 0, 0);	//map joystick click to button 6
 					}
 				}

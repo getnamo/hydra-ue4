@@ -2,7 +2,7 @@
     "FileVersion" : 3,
 	"FriendlyName" : "Hydra Plugin",
 	"Version" : 1,
-	"VersionName" : "0.8.5",
+	"VersionName" : "0.8.6",
 	"CreatedBy" : "Getnamo",
 	"CreatedByURL" : "http://getnamo.com",
 	"DocsURL" : "https://github.com/getnamo/hydra-ue4",
