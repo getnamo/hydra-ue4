@@ -15,7 +15,7 @@ Instructions:
 
 To calibrate your hydra offset drag and drop *HydraCalibrateActor* into the scene hit play and press *Hydra Bumper* and *Hydra Start* simultaneously on either hydra controller while making a T-pose.
 
-![IMG](http://i.imgur.com/fsa937B.gif)
+[Example Gifv](http://i.imgur.com/fsa937B.gifv)
 
 Press VR button to enter VR editor mode in a project of your choice.
 
