@@ -7,7 +7,7 @@ Instructions:
  3.	Browse to your cloned [engine root folder](https://github.com/EpicGames/UnrealEngine/tree/dev-vr-editor). Drag and drop *Engine* which contains the plugin there.
  4.    Compile and run the editor!
 
-![IMG](http://i.imgur.com/SRxh0p8.gif)
+[Example Gifv](http://i.imgur.com/SRxh0p8.gifv)
 
 ### Run VR Editor
 
