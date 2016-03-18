@@ -6,6 +6,7 @@ Instructions:
  2.	[Download VREditor hydra plugin release](https://github.com/getnamo/hydra-ue4/releases)
  3.	Browse to your cloned [engine root folder](https://github.com/EpicGames/UnrealEngine/tree/dev-vr-editor). Drag and drop *Engine* which contains the plugin there.
  4.    Compile and run the editor!
+ 5.    If you get VR Preview greyed out: What worked for me was to use the GenerateProjectFiles.bat after I put the HydraPlugin in and compiling the engine again. Next time I launched it, preview wasn't greyed out and VR editor worked.
 
 ![IMG](http://i.imgur.com/SRxh0p8.gif)
 
