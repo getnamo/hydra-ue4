@@ -7,7 +7,7 @@ Instructions:
  3.	Browse to your cloned [engine root folder](https://github.com/EpicGames/UnrealEngine/tree/dev-vr-editor). Drag and drop *Engine* which contains the plugin there.
  4.    Compile and run the editor!
 
-[Example Gifv](http://i.imgur.com/SRxh0p8.gifv)
+![IMG](http://i.imgur.com/SRxh0p8.gif)
 
 ### Run VR Editor
 
@@ -15,7 +15,7 @@ Instructions:
 
 To calibrate your hydra offset drag and drop *HydraCalibrateActor* into the scene hit play and press *Hydra Bumper* and *Hydra Start* simultaneously on either hydra controller while making a T-pose.
 
-![img](http://i.imgur.com/fsa937B.gif)
+![IMG](http://i.imgur.com/fsa937B.gif)
 
 Press VR button to enter VR editor mode in a project of your choice.
 
