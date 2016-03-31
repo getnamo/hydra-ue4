@@ -4,7 +4,7 @@
 #include "HydraSingleController.generated.h"
 
 UCLASS(BlueprintType)
-class UHydraSingleController : public UObject
+class HYDRAPLUGIN_API UHydraSingleController : public UObject
 {
 	GENERATED_UCLASS_BODY()
 public:

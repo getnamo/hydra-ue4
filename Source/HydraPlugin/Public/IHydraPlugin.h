@@ -11,7 +11,7 @@ class UHydraPluginComponent;
 /**
  * The public interface to this module
  */
-class IHydraPlugin : public IInputDeviceModule
+class HYDRAPLUGIN_API IHydraPlugin : public IInputDeviceModule
 {
 
 public:

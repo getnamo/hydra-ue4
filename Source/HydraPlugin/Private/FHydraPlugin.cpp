@@ -16,7 +16,7 @@
 #include <windows.h>
 
 #define LOCTEXT_NAMESPACE "HydraPlugin"
-#define PLUGIN_VERSION "0.8.3"
+#define PLUGIN_VERSION "0.8.8"
 DEFINE_LOG_CATEGORY_STATIC(HydraPluginLog, Log, All);
 
 //Private API - This is where the magic happens
@@ -29,6 +29,35 @@ typedef int (*dll_sixenseGetAllNewestData)(sixenseAllControllerData *);
 dll_sixenseInit HydraInit;
 dll_sixenseExit HydraExit;
 dll_sixenseGetAllNewestData HydraGetAllNewestData;
+
+class HydraUtilityTimer
+{
+	int64 TickTime = 0;
+	int64 TockTime = 0;
+public:
+	HydraUtilityTimer()
+	{
+		tick();
+	}
+
+	double unixTimeNow()
+	{
+		FDateTime timeUtc = FDateTime::UtcNow();
+		return timeUtc.ToUnixTimestamp() * 10000 + timeUtc.GetMillisecond();
+	}
+
+	void tick()
+	{
+		TickTime = unixTimeNow();
+	}
+
+	//return time elapsed in seconds
+	float tock()
+	{
+		TockTime = unixTimeNow();
+		return (TockTime - TickTime)/1000.f;
+	}
+};
 
 //UE v4.6 IM event wrappers
 bool EmitKeyUpEventForKey(FKey key, int32 user, bool repeat)
@@ -118,6 +147,7 @@ public:
 	DataCollector *collector;
 	HydraDataDelegate* hydraDelegate;
 	void* DLLHandle;
+	HydraUtilityTimer UtilityTimer;
 
 	/** handler to send all messages to */
 	TSharedRef<FGenericApplicationMessageHandler> MessageHandler;
@@ -272,15 +302,39 @@ public:
 	virtual void Tick(float DeltaTime) override
 	{
 		//Update Data History
-		DelegateUpdateAllData(DeltaTime);
-		DelegateEventTick();	//does SendControllerEvents not get late sampled?
 	}
 
 	virtual void SendControllerEvents() override
 	{
-		//DelegateEventTick();	//does SendControllerEvents not get late sampled?
+		//Use late sampling attached to SendControllerEvents
+		DelegateUpdateAllData(-1.f);	//-1 signifies we should use our internal utility timer for elapsed time
+		DelegateEventTick();
 	}
 
+
+	virtual ETrackingStatus GetControllerTrackingStatus(const int32 ControllerIndex, const EControllerHand DeviceHand) const
+	{
+		UHydraSingleController* controller = hydraDelegate->HydraControllerForControllerHand(DeviceHand);
+
+		if (controller != nullptr && !controller->docked)
+		{
+			return ETrackingStatus::Tracked;
+		}
+		else
+		{
+			return ETrackingStatus::NotTracked;
+		}
+	}
+
+	//Not guaranteed to work atm
+	float GetWorldScale() const
+	{
+		if (GEngine != nullptr && GEngine->GetWorld() != nullptr)
+		{
+			return GEngine->GetWorld()->GetWorldSettings()->WorldToMeters;
+		}
+		return 100.f;
+	}
 
 	//Hydra only supports one player so ControllerIndex is ignored.
 	virtual bool GetControllerOrientationAndPosition(const int32 ControllerIndex, const EControllerHand DeviceHand, FRotator& OutOrientation, FVector& OutPosition) const
@@ -292,7 +346,7 @@ public:
 		if (controller != nullptr && !controller->docked)
 		{
 			OutOrientation = controller->orientation;
-			OutPosition = controller->position;
+			OutPosition = controller->position  * (GetWorldScale() / 100.f);
 			RetVal = true;
 		}
 
@@ -329,6 +383,15 @@ private:
 /** Delegate Functions, called by plugin to keep data in sync and to emit the events.*/
 void FHydraController::DelegateUpdateAllData(float DeltaTime)
 {
+	//Tick-tock the timer
+	float timeElapsedSinceUpdate = UtilityTimer.tock();
+	UtilityTimer.tick();
+
+	if (DeltaTime < 0) 
+	{
+		DeltaTime = timeElapsedSinceUpdate;
+	}
+
 	//Get the freshest Data
 	int success = HydraGetAllNewestData(collector->allData);
 	if (success == SIXENSE_FAILURE){
@@ -876,7 +939,7 @@ class FHydraPlugin : public IHydraPlugin
 		else 
 		{
 			// defer until later
-		delegateComponents.Add(delegate);
+			delegateComponents.Add(delegate);
 		}
 	}
 

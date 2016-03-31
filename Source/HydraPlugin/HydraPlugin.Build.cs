@@ -8,7 +8,7 @@ namespace UnrealBuildTool.Rules
 	{
         private string ModulePath
         {
-            get { return Path.GetDirectoryName(RulesCompiler.GetModuleFilename(this.GetType().Name)); }
+            get { return ModuleDirectory; }
         }
 
         private string ThirdPartyPath
