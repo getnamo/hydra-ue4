@@ -189,7 +189,7 @@ public:
 		UE_LOG(LogClass, Error, TEXT("Unsupported Platform. Hydra Unavailable."));
 #endif
 		
-		FString DllFilepath = FPaths::ConvertRelativePathToFull(FPaths::Combine(*PluginRoot, TEXT("Source/ThirdParty/Sixense/Binaries"), *PlatformString, *SixenseDLLString));
+		FString DllFilepath = FPaths::ConvertRelativePathToFull(FPaths::Combine(*PluginRoot, TEXT("Binaries"), *PlatformString, *SixenseDLLString));
 
 		UE_LOG(HydraPluginLog, Log, TEXT("Fetching dll from %s"), *DllFilepath);
 
