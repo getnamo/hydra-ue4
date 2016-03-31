@@ -16,7 +16,7 @@
 #include <windows.h>
 
 #define LOCTEXT_NAMESPACE "HydraPlugin"
-#define PLUGIN_VERSION "0.8.4"
+#define PLUGIN_VERSION "0.8.8"
 DEFINE_LOG_CATEGORY_STATIC(HydraPluginLog, Log, All);
 
 //Private API - This is where the magic happens
@@ -302,8 +302,6 @@ public:
 	virtual void Tick(float DeltaTime) override
 	{
 		//Update Data History
-		DelegateUpdateAllData(DeltaTime);
-		DelegateEventTick();
 	}
 
 	virtual void SendControllerEvents() override
@@ -328,6 +326,16 @@ public:
 		}
 	}
 
+	//Not guaranteed to work atm
+	float GetWorldScale() const
+	{
+		if (GEngine != nullptr && GEngine->GetWorld() != nullptr)
+		{
+			return GEngine->GetWorld()->GetWorldSettings()->WorldToMeters;
+		}
+		return 100.f;
+	}
+
 	//Hydra only supports one player so ControllerIndex is ignored.
 	virtual bool GetControllerOrientationAndPosition(const int32 ControllerIndex, const EControllerHand DeviceHand, FRotator& OutOrientation, FVector& OutPosition) const
 	{
@@ -338,7 +346,7 @@ public:
 		if (controller != nullptr && !controller->docked)
 		{
 			OutOrientation = controller->orientation;
-			OutPosition = controller->position;
+			OutPosition = controller->position  * (GetWorldScale() / 100.f);
 			RetVal = true;
 		}
 
@@ -931,7 +939,7 @@ class FHydraPlugin : public IHydraPlugin
 		else 
 		{
 			// defer until later
-		delegateComponents.Add(delegate);
+			delegateComponents.Add(delegate);
 		}
 	}
 
