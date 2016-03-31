@@ -13,12 +13,12 @@ namespace UnrealBuildTool.Rules
 
         private string ThirdPartyPath
         {
-            get { return Path.GetFullPath(Path.Combine(ModulePath, "../ThirdParty/")); }
+            get { return Path.GetFullPath(Path.Combine(ModulePath, "../../ThirdParty/")); }
         }
 
-        private string ThirdPartyBinariesPath
+        private string BinariesPath
         {
-            get { return Path.Combine(ThirdPartyPath, "Sixense", "Binaries"); }
+            get { return Path.GetFullPath(Path.Combine(ModulePath, "../../Binaries/")); }
         }
 
 		public HydraPlugin(TargetInfo Target)
@@ -88,13 +88,13 @@ namespace UnrealBuildTool.Rules
 
                 if (Target.Platform == UnrealTargetPlatform.Win64)
                 {
-                    PublicDelayLoadDLLs.Add(Path.Combine(ThirdPartyBinariesPath, "Win64", "sixense_x64.dll"));
-                    RuntimeDependencies.Add(new RuntimeDependency(Path.Combine(ThirdPartyBinariesPath, "Win64","sixense_x64.dll")));
+                    PublicDelayLoadDLLs.Add("sixense_x64.dll");
+                    RuntimeDependencies.Add(new RuntimeDependency(Path.Combine(BinariesPath, "Win64", "sixense_x64.dll")));
                 }
                 else
                 {
-                    PublicDelayLoadDLLs.Add(Path.Combine(ThirdPartyBinariesPath, "Win32", "sixense.dll"));
-                    RuntimeDependencies.Add(new RuntimeDependency(Path.Combine(ThirdPartyBinariesPath, "Win32", "sixense.dll")));
+                    PublicDelayLoadDLLs.Add("sixense.dll");
+                    RuntimeDependencies.Add(new RuntimeDependency(Path.Combine(BinariesPath, "Win32", "sixense.dll")));
                 }
             }
 
