@@ -275,8 +275,7 @@ public:
 		//Required calls at init
 		IModularFeatures::Get().RegisterModularFeature(GetModularFeatureName(), this);
 
-		//@todo:  fix this.  construction of the controller happens after InitializeMotionControllers(), so we manually insert into the array here.
-		GEngine->MotionControllerDevices.AddUnique(this);
+		
 	}
 
 #undef LOCTEXT_NAMESPACE
@@ -296,7 +295,7 @@ public:
 		delete hydraDelegate;
 		delete collector;
 
-		GEngine->MotionControllerDevices.Remove(this);
+		
 	}
 
 	virtual void Tick(float DeltaTime) override
