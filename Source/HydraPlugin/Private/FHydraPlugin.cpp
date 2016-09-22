@@ -439,6 +439,11 @@ public:
 			RetVal = pluginPointer->RightHandData(Controller);
 		}
 
+		if (!Controller.Enabled || Controller.Docked)
+		{
+			return false;
+		}
+
 		OutPosition = Controller.Position;
 		OutOrientation = Controller.Orientation;
 
