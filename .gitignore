@@ -7,5 +7,7 @@
 
 # folders
 Intermediate/*
+
+# ignore compiled dlls
 Binaries/Win64/UE4Editor-HydraPlugin.dll
 Binaries/Win64/UE4Editor.modules
