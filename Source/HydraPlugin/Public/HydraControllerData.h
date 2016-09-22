@@ -9,25 +9,13 @@ struct HYDRAPLUGIN_API FHydraControllerData
 	GENERATED_USTRUCT_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hydra Controller Data")
-	int32 ControllerId;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hydra Controller Data")
-	FVector RawPosition;
+	TEnumAsByte<EHydraControllerHand> HandPossession;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hydra Controller Data")
 	FVector Position;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hydra Controller Data")
-	FVector Velocity;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hydra Controller Data")
-	FVector Acceleration;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hydra Controller Data")
 	FRotator Orientation;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hydra Controller Data")
-	FRotator AngularVelocity;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hydra Controller Data")
 	FVector2D Joystick;
@@ -66,7 +54,23 @@ struct HYDRAPLUGIN_API FHydraControllerData
 	bool Enabled;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hydra Controller Data")
-	TEnumAsByte<EHydraControllerHand> HandPossession;
+	FVector RawPosition;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hydra Controller Data")
+	FVector Velocity;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hydra Controller Data")
+	FVector Acceleration;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hydra Controller Data")
+	FRotator AngularVelocity;
+
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hydra Controller Data")
+	int32 ControllerId;
+
+
+
+
 
 	void SetFromSixenseDataUE(const SixenseControllerDataUE& data);
 };
