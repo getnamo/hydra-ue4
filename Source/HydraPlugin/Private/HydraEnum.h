@@ -105,10 +105,10 @@ typedef struct _sixenseControllerDataUE{
 	FVector acceleration;			//cm/s^2
 	FRotator angular_velocity;		//deg/s
 	bool trigger_pressed;
-} sixenseControllerDataUE;
+} SixenseControllerDataUE;
 
 typedef struct _sixenseAllControllerDataUE{
-	sixenseControllerDataUE controllers[4];		//current sdk max supported, untested on STEM or >2 controllers.
+	SixenseControllerDataUE controllers[4];		//current sdk max supported, untested on STEM or >2 controllers.
 	int32 enabledCount;
 	bool available;
 }sixenseAllControllerDataUE;

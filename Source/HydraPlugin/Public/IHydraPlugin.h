@@ -5,7 +5,6 @@
 #include "ModuleManager.h"
 #include "IInputDeviceModule.h"
 
-class HydraDataDelegate;
 class UHydraPluginComponent;
 
 /**
@@ -37,7 +36,10 @@ public:
 		return FModuleManager::Get().IsModuleLoaded( "HydraPlugin" );
 	}
 
-	virtual HydraDataDelegate* DataDelegate(){ return nullptr; };
-	virtual void DeferedAddDelegate(UHydraPluginComponent* delegate) {};
+	virtual void SetCalibrationTransform(const FTransform& CalibrationTransform) {};
+	virtual FTransform* GetCalibrationTransform() { return nullptr; };
+
+	virtual void AddComponentDelegate(UHydraPluginComponent* delegateComponent) {};
+	virtual void RemoveComponentDelegate(UHydraPluginComponent* delegateComponent) {};
 };
 
