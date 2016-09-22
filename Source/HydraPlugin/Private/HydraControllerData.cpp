@@ -7,6 +7,8 @@ void FHydraControllerData::SetFromSixenseDataUE(const SixenseControllerDataUE& d
 	Position = data.position;
 	Velocity = data.velocity;
 	Acceleration = data.acceleration;
+
+	RawPosition = data.rawPosition;
 	
 	Orientation = data.rotation;
 	AngularVelocity = data.angular_velocity;

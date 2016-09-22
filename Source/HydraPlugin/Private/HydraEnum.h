@@ -111,4 +111,13 @@ typedef struct _sixenseAllControllerDataUE{
 	SixenseControllerDataUE controllers[4];		//current sdk max supported, untested on STEM or >2 controllers.
 	int32 enabledCount;
 	bool available;
-}sixenseAllControllerDataUE;
+
+	bool hasFullEnabledCount()
+	{
+		return enabledCount == MAX_CONTROLLERS_SUPPORTED;
+	}
+	bool isValidAndTracking()
+	{
+		return (available && hasFullEnabledCount());
+	}
+}SixenseAllControllerDataUE;

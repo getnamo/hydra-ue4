@@ -17,7 +17,7 @@
 
 #define LOCTEXT_NAMESPACE "HydraPlugin"
 #define PLUGIN_VERSION "0.9.0"
-#define HYDRA_HISTORY_MAX 10	//10 frame history for data
+#define HYDRA_HISTORY_MAX 5	//5 frame history for data
 DEFINE_LOG_CATEGORY_STATIC(HydraPluginLog, Log, All);
 
 //Private API - This is where the magic happens
@@ -35,17 +35,49 @@ dll_sixenseGetAllNewestData HydraGetAllNewestData;
 
 #pragma endregion DLLImport
 
+#pragma region FHydraPlugin - Declaration
+
+//Forward declaration
+class FHydraPlugin : public IHydraPlugin
+{
+	FTransform CalibrationTransform;
+	class FHydraController* controllerReference = nullptr;
+	TArray<UHydraPluginComponent*> ComponentDelegates;
+	bool inputDeviceCreated = false;
+
+public:
+
+	virtual TSharedPtr< class IInputDevice > CreateInputDevice(const TSharedRef< FGenericApplicationMessageHandler >& InMessageHandler) override;
+
+	virtual void AddComponentDelegate(UHydraPluginComponent* delegateComponent) override;
+
+	virtual void RemoveComponentDelegate(UHydraPluginComponent* delegateComponent) override;
+
+	virtual void SetCalibrationTransform(const FTransform& InCalibrationTransform) override;
+
+	virtual FTransform GetCalibrationTransform() override;
+
+	virtual bool IsPluggedInAndEnabled() override;
+	virtual bool LeftHandData(FHydraControllerData& OutData) override;
+	virtual bool RightHandData(FHydraControllerData& OutData) override;
+
+	//Call this function on all the attached plugin component delegates
+	void CallFunctionOnDelegates(TFunction< void(UHydraPluginComponent*)> InFunction);
+};
+
+#pragma endregion FHydraPlugin - Declaration
+
 #pragma region DataCollector
 
 //Collector class contains all the data captured from .dll and delegate data will point to this structure (allDataUE and historicalDataUE).
 class DataCollector
 {
 public:
-	DataCollector()
+	DataCollector() :
+		LatestLeft(nullptr),
+		LatestRight(nullptr)
 	{
-	}
-	~DataCollector()
-	{
+
 	}
 
 	SixenseControllerDataUE ConvertData(sixenseControllerData* data, FVector offset = FVector(0,0,0))
@@ -77,62 +109,96 @@ public:
 	//todo: add yaw rotational offset support?
 	void ConvertAllData(FVector offset = FVector(0, 0, 0))
 	{
-		allDataUE.enabledCount = 0;
+		AllDataUE.enabledCount = 0;
 
 		for (int i = 0; i < MAX_CONTROLLERS_SUPPORTED; i++)
 		{
-			allDataUE.controllers[i] = ConvertData(&allData.controllers[i], offset);
-			if (allDataUE.controllers[i].enabled){
-				allDataUE.enabledCount++;
+			AllDataUE.controllers[i] = ConvertData(&AllSixenseData.controllers[i], offset);
+			if (AllDataUE.controllers[i].enabled){
+				AllDataUE.enabledCount++;
+			}
+
+			//update latest pointers
+			if (AllDataUE.controllers[i].which_hand == (uint8)EHydraControllerHand::HYDRA_HAND_LEFT)
+			{
+				LatestLeft = &AllDataUE.controllers[i];
+			}
+			else if (AllDataUE.controllers[i].which_hand == (uint8)EHydraControllerHand::HYDRA_HAND_RIGHT)
+			{
+				LatestRight = &AllDataUE.controllers[i];
 			}
 		}
 	}
 
-	void GetLatestData()
+	void GetLatestData(const FVector& Offset)
 	{
-		int success = HydraGetAllNewestData(&allData);
+		int success = HydraGetAllNewestData(&AllSixenseData);
 		if (success == SIXENSE_FAILURE) {
 			UE_LOG(HydraPluginLog, Error, TEXT("Hydra Error! Failed to get freshest data."));
 			return;
 		}
 		//if the hydras are unavailable don't try to get more information
-		if (!allDataUE.available) {
+		if (!AllDataUE.available) {
 			UE_LOG(HydraPluginLog, Log, TEXT("Collector data not available."));
 			return;
 		}
 
-		ConvertAllData(IHydraPlugin::Get().GetCalibrationTransform()->GetLocation());
+		ConvertAllData(Offset);
 
 		//Set all historical data
 		for (int i = 0; i < HYDRA_HISTORY_MAX-1; i++)
 		{
-			historicalDataUE[i+1] = historicalDataUE[i];
+			HistoricalDataUE[i+1] = HistoricalDataUE[i];
 		}
 
 		//latest
-		historicalDataUE[0] = allDataUE;
+		HistoricalDataUE[0] = AllDataUE;
+
+		//left/right pointers
+
 	}
 
-	sixenseAllControllerDataUE allDataUE;
-	sixenseAllControllerData allData;
-	sixenseAllControllerDataUE historicalDataUE[HYDRA_HISTORY_MAX];
+	sixenseAllControllerData AllSixenseData;
+	SixenseControllerDataUE* LatestLeft;
+	SixenseControllerDataUE* LatestRight;
+
+	SixenseAllControllerDataUE AllDataUE;
+	SixenseAllControllerDataUE HistoricalDataUE[HYDRA_HISTORY_MAX];
 };
 
 #pragma endregion DataCollector
 
 #pragma region FHydraController
 
+class FHydraPlugin;
+
+struct FHydraKeyMap 
+{
+	FKey HydraKey;
+	FKey MotionControllerKey;
+
+	FHydraKeyMap(const FKey& InHydra, const FKey& InMCKey)
+	{
+		HydraKey = InHydra;
+		MotionControllerKey = InMCKey;
+	}
+};
+
 class FHydraController : public IInputDevice, public IMotionController
 {	
 
 public:
-	DataCollector *collector;
+	DataCollector* collector;
+	FHydraPlugin* pluginPointer;
 
 	void* DLLHandle;
 	HydraUtilityTimer UtilityTimer;
 
 	/** handler to send all messages to */
 	TSharedRef<FGenericApplicationMessageHandler> MessageHandler;
+
+	TArray<FHydraKeyMap> LeftKeyMap;
+	TArray<FHydraKeyMap> RightKeyMap;
 	
 	void AddInputMappingKeys()
 	{
@@ -181,16 +247,46 @@ public:
 		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightRotationYaw, LOCTEXT("HydraRightRotationYaw", "Hydra Right Rotation Yaw"), FKeyDetails::FloatAxis));
 		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightRotationRoll, LOCTEXT("HydraRightRotationRoll", "Hydra Right Rotation Roll"), FKeyDetails::FloatAxis));
 
+		//Add it according to the HydraEnum keys, NB: do not desync from the keys!
+		/*
+		HYDRA_BUTTON_B1,
+		HYDRA_BUTTON_B2,
+		HYDRA_BUTTON_B3,
+		HYDRA_BUTTON_B4,
+		HYDRA_BUTTON_START,
+		HYDRA_BUTTON_JOYSTICK,
+		HYDRA_BUTTON_BUMPER,
+		HYDRA_BUTTON_TRIGGER
+		*/
+
+		LeftKeyMap.Empty();
+		LeftKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraLeftB1, FGamepadKeyNames::MotionController_Left_FaceButton1));
+		LeftKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraLeftB2, FGamepadKeyNames::MotionController_Left_FaceButton2));
+		LeftKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraLeftB3, FGamepadKeyNames::MotionController_Left_FaceButton3));
+		LeftKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraLeftB4, FGamepadKeyNames::MotionController_Left_FaceButton4));
+		LeftKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraLeftStart, FGamepadKeyNames::MotionController_Left_FaceButton5));
+		LeftKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraLeftJoystickClick, FGamepadKeyNames::MotionController_Left_FaceButton6));
+		LeftKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraLeftBumper, FGamepadKeyNames::MotionController_Left_Shoulder));
+		LeftKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraLeftTriggerClick, FGamepadKeyNames::MotionController_Left_Trigger));
+
+		RightKeyMap.Empty();
+		RightKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraRightB1, FGamepadKeyNames::MotionController_Right_FaceButton1));
+		RightKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraRightB2, FGamepadKeyNames::MotionController_Right_FaceButton2));
+		RightKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraRightB3, FGamepadKeyNames::MotionController_Right_FaceButton3));
+		RightKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraRightB4, FGamepadKeyNames::MotionController_Right_FaceButton4));
+		RightKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraRightStart, FGamepadKeyNames::MotionController_Right_FaceButton5));
+		RightKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraRightJoystickClick, FGamepadKeyNames::MotionController_Right_FaceButton6));
+		RightKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraRightBumper, FGamepadKeyNames::MotionController_Right_Shoulder));
+		RightKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraRightTriggerClick, FGamepadKeyNames::MotionController_Right_Trigger));
 	}
 
 	//Init and Runtime
 	FHydraController(const TSharedRef< FGenericApplicationMessageHandler >& InMessageHandler)
-		: MessageHandler(InMessageHandler)
+		: MessageHandler(InMessageHandler), pluginPointer(nullptr)
 	{
 		UE_LOG(HydraPluginLog, Log, TEXT("Attempting to startup Hydra Module, v%s"), TEXT(PLUGIN_VERSION));
 
 		collector = new DataCollector;
-		//hydraDelegate->HydraHistoryData// = collector->historicalDataUE;
 
 		//This is a fixed relative path, meaning this file needs to exist for the plugin to work, even in shipping build!
 		//Todo: fix path lookup when packaged
@@ -240,9 +336,9 @@ public:
 		HydraExit = (dll_sixenseExit)FPlatformProcess::GetDllExport(DLLHandle, TEXT("sixenseExit"));
 		HydraGetAllNewestData = (dll_sixenseGetAllNewestData)FPlatformProcess::GetDllExport(DLLHandle, TEXT("sixenseGetAllNewestData"));
 
-		collector->allDataUE.available = (HydraInit() == SIXENSE_SUCCESS);
+		collector->AllDataUE.available = (HydraInit() == SIXENSE_SUCCESS);
 
-		if (collector->allDataUE.available)
+		if (collector->AllDataUE.available)
 		{
 			UE_LOG(HydraPluginLog, Log, TEXT("Hydra Available."));
 
@@ -292,18 +388,27 @@ public:
 	virtual ETrackingStatus GetControllerTrackingStatus(const int32 ControllerIndex, const EControllerHand DeviceHand) const
 	{
 		//Check if we're plugged in
-		/*if (!hydraDelegate->HydraIsAvailable())
+		if (!pluginPointer->IsPluggedInAndEnabled())
 		{
 			return ETrackingStatus::NotTracked;
-		}*/
+		}
 
-		/*UHydraSingleController* controller = hydraDelegate->HydraControllerForControllerHand(DeviceHand);
-
-		if (controller != nullptr && controller->enabled && !controller->docked)
+		//Get data to see if we're tracked
+		FHydraControllerData Controller;
+		if (DeviceHand == EControllerHand::Left)
+		{
+			pluginPointer->LeftHandData(Controller);
+		}
+		else if (DeviceHand == EControllerHand::Right)
+		{
+			pluginPointer->RightHandData(Controller);
+		}
+		
+		if (Controller.Enabled && !Controller.Docked)
 		{
 			return ETrackingStatus::Tracked;
 		}
-		else*/
+		else
 		{
 			return ETrackingStatus::NotTracked;
 		}
@@ -324,14 +429,18 @@ public:
 	{
 		bool RetVal = false;
 		
-		/*UHydraSingleController* controller = hydraDelegate->HydraControllerForControllerHand(DeviceHand);
-
-		if (controller != nullptr && controller->enabled && !controller->docked)
+		FHydraControllerData Controller;
+		if (DeviceHand == EControllerHand::Left)
 		{
-			OutOrientation = controller->orientation;
-			OutPosition = controller->position  * (GetWorldScale() / 100.f);
-			RetVal = true;
-		}*/
+			RetVal = pluginPointer->LeftHandData(Controller);
+		}
+		else if (DeviceHand == EControllerHand::Right)
+		{
+			RetVal = pluginPointer->RightHandData(Controller);
+		}
+
+		OutPosition = Controller.Position;
+		OutOrientation = Controller.Orientation;
 
 		return RetVal;
 	}
@@ -355,6 +464,10 @@ public:
 private:
 	//Delegate Private functions
 	void HydraInputTick();
+
+	void BroadcastButtonChangeForController(EHydraControllerButton Button, const FHydraControllerData& Latest, bool ButtonPressed);
+	void BroadcastButtonPressForController(EHydraControllerButton Button, const FHydraControllerData& Controller);
+	void BroadcastButtonReleaseForController(EHydraControllerButton Button, const FHydraControllerData& Controller);
 };
 
 
@@ -364,68 +477,323 @@ private:
 void FHydraController::HydraInputTick()
 {
 	//Update to our latest data
-	collector->GetLatestData();
+	collector->GetLatestData(pluginPointer->GetCalibrationTransform().GetLocation());
 
 	//run the loop and emit events
-	const sixenseAllControllerDataUE& Latest = collector->allDataUE;
-	const sixenseAllControllerDataUE& Previous = collector->historicalDataUE[1];
+	SixenseAllControllerDataUE& LatestSet = collector->AllDataUE;
+	SixenseAllControllerDataUE& PreviousSet = collector->HistoricalDataUE[1];
+
+	if (!LatestSet.isValidAndTracking())
+	{
+		return;
+	}
+
+	//Did our enabled count change?
+	if (LatestSet.enabledCount != PreviousSet.enabledCount)
+	{
+		//If we have a full enabled count we just plugged the hydra in
+		if (LatestSet.hasFullEnabledCount())
+		{
+			pluginPointer->CallFunctionOnDelegates([&](UHydraPluginComponent* Component)
+			{
+				Component->OnPluggedIn.Broadcast();
+			});
+		}
+		else
+		{
+			pluginPointer->CallFunctionOnDelegates([&](UHydraPluginComponent* Component)
+			{
+				Component->OnUnplugged.Broadcast();
+			});
+		}
+	}
+
+	for (int i = 0; i < MAX_CONTROLLERS_SUPPORTED; i++)
+	{
+		FHydraControllerData Latest, Previous;
+
+		//Convert to organized UE struct
+		Latest.SetFromSixenseDataUE(LatestSet.controllers[i]);
+		Previous.SetFromSixenseDataUE(PreviousSet.controllers[i]);
+
+		//We don't care about disabled controllers
+		if (!Latest.Enabled)
+		{
+			continue;
+		}
+
+		//Store for future hand comparisons
+		bool leftHand = Latest.HandPossession == EHydraControllerHand::HYDRA_HAND_LEFT;
+
+		//Docking change
+		if (Latest.Docked != Previous.Docked)
+		{
+			if (Latest.Docked)
+			{
+				pluginPointer->CallFunctionOnDelegates([&](UHydraPluginComponent* Component)
+				{
+					Component->ControllerDocked.Broadcast(Latest);
+				});
+			}
+			else
+			{
+				pluginPointer->CallFunctionOnDelegates([&](UHydraPluginComponent* Component)
+				{
+					Component->ControllerUndocked.Broadcast(Latest);
+				});
+			}
+		}
+
+		//Buttons
+
+		//Trigger
+		if (Latest.Trigger != Previous.Trigger)
+		{
+			//Input mapping
+			if (leftHand)
+			{
+				EmitAnalogInputEventForKey(EKeysHydra::HydraLeftTrigger, Latest.Trigger, 0, 0);
+				EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Left_TriggerAxis, Latest.Trigger, 0, 0);
+			}
+			else
+			{
+				EmitAnalogInputEventForKey(EKeysHydra::HydraRightTrigger, Latest.Trigger, 0, 0);
+				EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Right_TriggerAxis, Latest.Trigger, 0, 0);
+			}
+
+			if (Latest.TriggerPressed != Previous.TriggerPressed)
+			{
+				BroadcastButtonChangeForController(HYDRA_BUTTON_TRIGGER, Latest, Latest.TriggerPressed);
+			}
+		}
+
+		//Bumper
+		if (Latest.BumperPressed != Previous.BumperPressed)
+		{
+			BroadcastButtonChangeForController(HYDRA_BUTTON_BUMPER, Latest, Latest.BumperPressed);
+		}
+
+		//B1
+		if (Latest.B1Pressed != Previous.B1Pressed)
+		{
+			BroadcastButtonChangeForController(HYDRA_BUTTON_B1, Latest, Latest.B1Pressed);
+		}
+
+		//B2
+		if (Latest.B2Pressed != Previous.B2Pressed)
+		{
+			BroadcastButtonChangeForController(HYDRA_BUTTON_B2, Latest, Latest.B2Pressed);
+		}
+
+		//B3
+		if (Latest.B3Pressed != Previous.B3Pressed)
+		{
+			BroadcastButtonChangeForController(HYDRA_BUTTON_B3, Latest, Latest.B3Pressed);
+		}
+
+		//B4
+		if (Latest.B4Pressed != Previous.B4Pressed)
+		{
+			BroadcastButtonChangeForController(HYDRA_BUTTON_B4, Latest, Latest.B4Pressed);
+		}
+
+		//Start
+		if (Latest.StartPressed != Previous.StartPressed)
+		{
+			BroadcastButtonChangeForController(HYDRA_BUTTON_START, Latest, Latest.StartPressed);
+		}
+
+		//Joystick Click
+		if (Latest.JoystickClicked != Previous.JoystickClicked)
+		{
+			BroadcastButtonChangeForController(HYDRA_BUTTON_JOYSTICK, Latest, Latest.JoystickClicked);
+		}
+
+		//Joystick movement
+		if (Latest.Joystick.X != Previous.Joystick.X ||
+			Latest.Joystick.Y != Previous.Joystick.Y)
+		{
+			if (leftHand)
+			{
+				EmitAnalogInputEventForKey(EKeysHydra::HydraLeftJoystickX, Latest.Joystick.X, 0, 0);
+				EmitAnalogInputEventForKey(EKeysHydra::HydraLeftJoystickY, Latest.Joystick.Y, 0, 0);
+
+				EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Left_Thumbstick_X, Latest.Joystick.X, 0, 0);
+				EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Left_Thumbstick_Y, Latest.Joystick.Y, 0, 0);
+			}
+			else
+			{
+				EmitAnalogInputEventForKey(EKeysHydra::HydraRightJoystickX, Latest.Joystick.X, 0, 0);
+				EmitAnalogInputEventForKey(EKeysHydra::HydraRightJoystickY, Latest.Joystick.Y, 0, 0);
+
+				EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Right_Thumbstick_X, Latest.Joystick.X, 0, 0);
+				EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Right_Thumbstick_Y, Latest.Joystick.Y, 0, 0);
+			}
+			pluginPointer->CallFunctionOnDelegates([&](UHydraPluginComponent* Component)
+			{
+				Component->JoystickMoved.Broadcast(Latest, Latest.Joystick);
+			});
+		}
+
+		//Controller movement
+		if (!Latest.Docked)
+		{
+			if (leftHand)
+			{
+				//2 meters = 1.0
+				EmitAnalogInputEventForKey(EKeysHydra::HydraLeftMotionX, MotionInputMappingConversion(Latest.Position.X), 0, 0);
+				EmitAnalogInputEventForKey(EKeysHydra::HydraLeftMotionY, MotionInputMappingConversion(Latest.Position.Y), 0, 0);
+				EmitAnalogInputEventForKey(EKeysHydra::HydraLeftMotionZ, MotionInputMappingConversion(Latest.Position.Z), 0, 0);
+
+				EmitAnalogInputEventForKey(EKeysHydra::HydraLeftRotationPitch, Latest.Orientation.Pitch / 90.f, 0, 0);
+				EmitAnalogInputEventForKey(EKeysHydra::HydraLeftRotationYaw, Latest.Orientation.Yaw / 180.f, 0, 0);
+				EmitAnalogInputEventForKey(EKeysHydra::HydraLeftRotationRoll, Latest.Orientation.Roll / 180.f, 0, 0);
+			}
+			else
+			{
+				//2 meters = 1.0
+				EmitAnalogInputEventForKey(EKeysHydra::HydraRightMotionX, MotionInputMappingConversion(Latest.Position.X), 0, 0);
+				EmitAnalogInputEventForKey(EKeysHydra::HydraRightMotionY, MotionInputMappingConversion(Latest.Position.Y), 0, 0);
+				EmitAnalogInputEventForKey(EKeysHydra::HydraRightMotionZ, MotionInputMappingConversion(Latest.Position.Z), 0, 0);
+
+				EmitAnalogInputEventForKey(EKeysHydra::HydraRightRotationPitch, Latest.Orientation.Pitch / 90.f, 0, 0);
+				EmitAnalogInputEventForKey(EKeysHydra::HydraRightRotationYaw, Latest.Orientation.Yaw / 180.f, 0, 0);
+				EmitAnalogInputEventForKey(EKeysHydra::HydraRightRotationRoll, Latest.Orientation.Roll / 180.f, 0, 0);
+			}
+			pluginPointer->CallFunctionOnDelegates([&](UHydraPluginComponent* Component)
+			{
+				Component->ControllerMoved.Broadcast(Latest, Latest.Position, Latest.Orientation);
+			});
+		}
+	}
+}
+
+//convenience wrapper for emitting input mapping and delegate function calls
+void FHydraController::BroadcastButtonChangeForController(EHydraControllerButton Button,
+	const FHydraControllerData& Latest, 
+	bool ButtonPressed)
+{
+	if (Latest.HandPossession == HYDRA_HAND_LEFT)
+	{
+		if (ButtonPressed)
+		{
+			EmitKeyDownEventForKey(LeftKeyMap[Button - 1].HydraKey, 0, 0);
+			EmitKeyDownEventForKey(LeftKeyMap[Button - 1].MotionControllerKey, 0, 0);
+			BroadcastButtonPressForController(Button, Latest);
+		}
+		else
+		{
+			EmitKeyUpEventForKey(LeftKeyMap[Button - 1].HydraKey, 0, 0);
+			EmitKeyUpEventForKey(LeftKeyMap[Button - 1].MotionControllerKey, 0, 0);
+			BroadcastButtonReleaseForController(Button, Latest);
+		}
+	}
+	else
+	{
+		if (ButtonPressed)
+		{
+			EmitKeyDownEventForKey(RightKeyMap[Button - 1].HydraKey, 0, 0);
+			EmitKeyDownEventForKey(RightKeyMap[Button - 1].MotionControllerKey, 0, 0);
+			BroadcastButtonPressForController(Button, Latest);
+		}
+		else
+		{
+			EmitKeyUpEventForKey(RightKeyMap[Button - 1].HydraKey, 0, 0);
+			EmitKeyUpEventForKey(RightKeyMap[Button - 1].MotionControllerKey, 0, 0);
+			BroadcastButtonReleaseForController(Button, Latest);
+		}
+	}
+}
+
+void FHydraController::BroadcastButtonPressForController(EHydraControllerButton Button, const FHydraControllerData& Controller)
+{
+	pluginPointer->CallFunctionOnDelegates([&](UHydraPluginComponent* Component)
+	{
+		Component->ButtonPressed.Broadcast(Controller, Button);
+	});
+}
+
+void FHydraController::BroadcastButtonReleaseForController(EHydraControllerButton Button, const FHydraControllerData& Controller)
+{
+	pluginPointer->CallFunctionOnDelegates([&](UHydraPluginComponent* Component)
+	{
+		Component->ButtonReleased.Broadcast(Controller, Button);
+	});
 }
 
 #pragma endregion FHydraController
 
-#pragma region FHydraPlugin
+#pragma region FHydraPlugin - Methods
 
-//Implementing the module, required
-class FHydraPlugin : public IHydraPlugin
+TSharedPtr< class IInputDevice > FHydraPlugin::CreateInputDevice(const TSharedRef< FGenericApplicationMessageHandler >& InMessageHandler)
 {
-	FTransform CalibrationTransform;
-	FHydraController* controllerReference = nullptr;
-	TArray<UHydraPluginComponent*> ComponentDelegates;
-	bool inputDeviceCreated = false;
+	controllerReference = new FHydraController(InMessageHandler);
+	controllerReference->pluginPointer = this;
+	inputDeviceCreated = true;
 
-public:
+	return TSharedPtr< class IInputDevice >(controllerReference);
+}
 
-	virtual TSharedPtr< class IInputDevice > CreateInputDevice(const TSharedRef< FGenericApplicationMessageHandler >& InMessageHandler) override
+void FHydraPlugin::AddComponentDelegate(UHydraPluginComponent* delegateComponent)
+{
+	ComponentDelegates.Add(delegateComponent);
+}
+
+void FHydraPlugin::RemoveComponentDelegate(UHydraPluginComponent* delegateComponent)
+{
+	ComponentDelegates.Remove(delegateComponent);
+}
+
+void FHydraPlugin::SetCalibrationTransform(const FTransform& InCalibrationTransform)
+{
+	CalibrationTransform = InCalibrationTransform;
+}
+
+FTransform FHydraPlugin::GetCalibrationTransform()
+{
+	return CalibrationTransform;
+}
+
+bool FHydraPlugin::IsPluggedInAndEnabled()
+{
+	return controllerReference->collector->AllDataUE.isValidAndTracking();
+}
+
+bool FHydraPlugin::LeftHandData(FHydraControllerData& OutData)
+{
+	if (controllerReference->collector->LatestLeft != nullptr)
 	{
-		controllerReference = new FHydraController(InMessageHandler);
-		inputDeviceCreated = true;
-
-		return TSharedPtr< class IInputDevice >(controllerReference);
+		OutData.SetFromSixenseDataUE(*controllerReference->collector->LatestLeft);
+		return true;
 	}
-
-	virtual void AddComponentDelegate(UHydraPluginComponent* delegateComponent) override
+	else
 	{
-		ComponentDelegates.Add(delegateComponent);
+		return false;
 	}
+}
 
-	virtual void RemoveComponentDelegate(UHydraPluginComponent* delegateComponent) override
+bool FHydraPlugin::RightHandData(FHydraControllerData& OutData)
+{
+	if (controllerReference->collector->LatestRight != nullptr)
 	{
-		ComponentDelegates.Remove(delegateComponent);
+		OutData.SetFromSixenseDataUE(*controllerReference->collector->LatestRight);
+		return true;
 	}
-
-	virtual void SetCalibrationTransform(const FTransform& InCalibrationTransform) override
+	else
 	{
-		CalibrationTransform = InCalibrationTransform;
+		return false;
 	}
+}
 
-	virtual FTransform* GetCalibrationTransform() override
+void FHydraPlugin::CallFunctionOnDelegates(TFunction< void(UHydraPluginComponent*)> InFunction)
+{
+	for (UHydraPluginComponent* ComponentDelegate : ComponentDelegates)
 	{
-		return &CalibrationTransform;
+		InFunction(ComponentDelegate);
 	}
-
-	//Call this function on all the attached plugin component delegates
-	void CallFunctionOnDelegates(TFunction< void(UHydraPluginComponent*)> InFunction)
-	{
-		for (UHydraPluginComponent* ComponentDelegate : ComponentDelegates)
-		{
-			InFunction(ComponentDelegate);
-		}
-	}
-
-
-};
+}
 
 //Second parameter needs to be called the same as the Module name or packaging will fail
 IMPLEMENT_MODULE(FHydraPlugin, HydraPlugin)	
 
-#pragma endregion FHydraPlugin
+#pragma endregion FHydraPlugin - Methods

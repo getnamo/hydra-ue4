@@ -29,47 +29,48 @@ void UHydraPluginComponent::UninitializeComponent()
 //Utility Functions
 bool UHydraPluginComponent::IsAvailable()
 {
-	return IHydraPlugin::IsAvailable();
+	return ( IHydraPlugin::IsAvailable() && 
+			 IHydraPlugin::Get().IsPluggedInAndEnabled() );
 }
 
-void UHydraPluginComponent::GetHistoricalFrameForHand(FHydraControllerData& OutControllerData, EHydraControllerHand hand /*= HYDRA_HAND_LEFT*/, int32 historyIndex /*= 0*/)
+bool UHydraPluginComponent::GetLatestFrameForHand(FHydraControllerData& OutControllerData, EHydraControllerHand hand /*= HYDRA_HAND_LEFT*/)
 {
-
-}
-
-void UHydraPluginComponent::GetLatestFrameForHand(FHydraControllerData& OutControllerData, EHydraControllerHand hand /*= HYDRA_HAND_LEFT*/)
-{
-	GetHistoricalFrameForHand(OutControllerData, hand, 0);
+	switch (hand)
+	{
+	case HYDRA_HAND_LEFT:
+		return IHydraPlugin::Get().LeftHandData(OutControllerData);
+		break;
+	case HYDRA_HAND_RIGHT:
+		return IHydraPlugin::Get().RightHandData(OutControllerData);
+		break;
+	default:
+		break;
+	}
+	return false;
 }
 
 //Calibration
 void UHydraPluginComponent::SetBaseOffset(FVector Offset)
 {
-	//dataDelegate->baseOffset = Offset;
+	FTransform CalibrationTransform;
+	CalibrationTransform.SetLocation(Offset);
+	IHydraPlugin::Get().SetCalibrationTransform(CalibrationTransform);
 }
 
 void UHydraPluginComponent::Calibrate(FVector OffsetFromShouldMidPoint)
 {
-	//Get left and right hand midpoint position
-	//dataDelegate->baseOffset = -(dataDelegate->LeftController->rawPosition + dataDelegate->RightController->rawPosition) / 2 + OffsetFromShouldMidPoint;
-}
+	FTransform CalibrationTransform;
 
-//Determining Hand
-int32 UHydraPluginComponent::ControllerIdForHand(EHydraControllerHand hand)
-{
-	return 0;
-	/*switch (hand)
-	{
-	case HYDRA_HAND_LEFT:
-		return dataDelegate->LeftControllerId;
-		break;
-	case HYDRA_HAND_RIGHT:
-		return dataDelegate->RightControllerId;
-		break;
-	default:
-		return 0;	//default to left
-		break;
-	}*/	
+	FHydraControllerData Left, Right;
+	bool ValidData = false;
+	ValidData = IHydraPlugin::Get().LeftHandData(Left);
+	ValidData = ValidData && IHydraPlugin::Get().LeftHandData(Right);
+	
+	//Get left and right hand midpoint position
+	FVector Offset = -(Left.RawPosition + Right.RawPosition) / 2 + OffsetFromShouldMidPoint;
+	
+	CalibrationTransform.SetLocation(Offset);
+	IHydraPlugin::Get().SetCalibrationTransform(CalibrationTransform);
 }
 
 

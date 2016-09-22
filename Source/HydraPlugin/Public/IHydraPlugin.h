@@ -3,9 +3,8 @@
 #pragma once
 
 #include "ModuleManager.h"
+#include "HydraComponent.h"
 #include "IInputDeviceModule.h"
-
-class UHydraPluginComponent;
 
 /**
  * The public interface to this module
@@ -37,9 +36,13 @@ public:
 	}
 
 	virtual void SetCalibrationTransform(const FTransform& CalibrationTransform) {};
-	virtual FTransform* GetCalibrationTransform() { return nullptr; };
+	virtual FTransform GetCalibrationTransform() { return FTransform(); };
+	virtual bool IsPluggedInAndEnabled() { return false; };
 
 	virtual void AddComponentDelegate(UHydraPluginComponent* delegateComponent) {};
 	virtual void RemoveComponentDelegate(UHydraPluginComponent* delegateComponent) {};
+
+	virtual bool LeftHandData(FHydraControllerData& OutData) { return false; }
+	virtual bool RightHandData(FHydraControllerData& OutData) { return false; }
 };
 

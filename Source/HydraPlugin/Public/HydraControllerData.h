@@ -12,6 +12,9 @@ struct HYDRAPLUGIN_API FHydraControllerData
 	int32 ControllerId;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hydra Controller Data")
+	FVector RawPosition;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hydra Controller Data")
 	FVector Position;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hydra Controller Data")

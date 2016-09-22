@@ -12,7 +12,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHydraUnDockedSignature, const FHydr
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHydraButtonPressedSignature, const FHydraControllerData&, Controller, EHydraControllerButton, button);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHydraButtonReleasedSignature, const FHydraControllerData&, Controller, EHydraControllerButton, button);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHydraJoystickMovedSignature, const FHydraControllerData&, Controller, FVector2D, movement);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_SixParams(FHydraControllerMovedSignature, const FHydraControllerData&, Controller, FVector, position, FVector, velocity, FVector, acceleration, FRotator, orientation, FRotator, angularVelocity);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FHydraControllerMovedSignature, const FHydraControllerData&, Controller, FVector, Position, FRotator, Orientation);
 
 UCLASS(ClassGroup="Input Controller", meta=(BlueprintSpawnableComponent))
 class HYDRAPLUGIN_API UHydraPluginComponent : public UActorComponent
@@ -24,10 +24,10 @@ public:
 	//Buttons are relegated to input mapping, non-button features are available here
 
 	UPROPERTY(BlueprintAssignable, Category = "Hydra Events")
-	FHydraPluggedInSignature PluggedIn;
+	FHydraPluggedInSignature OnPluggedIn;
 
 	UPROPERTY(BlueprintAssignable, Category = "Hydra Events")
-	FHydraUnPluggedSignature Unplugged;
+	FHydraUnPluggedSignature OnUnplugged;
 
 	UPROPERTY(BlueprintAssignable, Category = "Hydra Events")
 	FHydraDockedSignature ControllerDocked;
@@ -52,13 +52,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = HydraFunctions)
 	bool IsAvailable();
 
-	//** Poll for historical data.  Valid Hand is Left or Right, Valid history index is 0-9.  */
-	UFUNCTION(BlueprintCallable, Category = HydraFunctions)
-	void GetHistoricalFrameForHand(FHydraControllerData& OutControllerData, EHydraControllerHand hand = HYDRA_HAND_LEFT, int32 historyIndex = 0);
-
 	//** Get the latest available data given in a single frame. Valid Hand is Left or Right  */
 	UFUNCTION(BlueprintCallable, Category = HydraFunctions)
-	void GetLatestFrameForHand(FHydraControllerData& OutControllerData, EHydraControllerHand hand = HYDRA_HAND_LEFT);
+	bool GetLatestFrameForHand(FHydraControllerData& OutControllerData, EHydraControllerHand hand = HYDRA_HAND_LEFT);
 
 	// Set a manual offset, use this for manual calibration
 	UFUNCTION(BlueprintCallable, Category = HydraFunctions)
@@ -71,9 +67,7 @@ public:
 
 
 protected:
-	//Utility Functions
-	int32 ControllerIdForHand(EHydraControllerHand hand);
-
 	virtual void InitializeComponent() override;
 	virtual void UninitializeComponent() override;
+
 };
