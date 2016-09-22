@@ -6,4 +6,5 @@
 *.pdb
 
 # folders
-Intermediate
+Intermediate/*
+Binaries/*

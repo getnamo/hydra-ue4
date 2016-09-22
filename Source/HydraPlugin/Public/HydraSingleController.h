@@ -64,6 +64,9 @@ public:
 	bool docked;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hydra Frame")
+	bool enabled;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hydra Frame")
 	TEnumAsByte<EHydraControllerHand> handPossession;
 
 	//Convenience Call, optionally check hand possession property

@@ -16,7 +16,7 @@
 #include <windows.h>
 
 #define LOCTEXT_NAMESPACE "HydraPlugin"
-#define PLUGIN_VERSION "0.8.9"
+#define PLUGIN_VERSION "0.8.10"
 DEFINE_LOG_CATEGORY_STATIC(HydraPluginLog, Log, All);
 
 //Private API - This is where the magic happens
@@ -342,7 +342,7 @@ public:
 		
 		UHydraSingleController* controller = hydraDelegate->HydraControllerForControllerHand(DeviceHand);
 
-		if (controller != nullptr && !controller->docked)
+		if (controller != nullptr && controller->enabled && !controller->docked)
 		{
 			OutOrientation = controller->orientation;
 			OutPosition = controller->position  * (GetWorldScale() / 100.f);

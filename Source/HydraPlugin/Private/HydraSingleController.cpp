@@ -39,6 +39,7 @@ void UHydraSingleController::setFromSixenseDataUE(sixenseControllerDataUE* data)
 
 	this->trigger = data->trigger;
 	this->docked = data->is_docked;
+	this->enabled = data->enabled;
 
 	this->handPossession = (EHydraControllerHand)data->which_hand;
 }
