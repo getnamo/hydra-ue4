@@ -112,6 +112,7 @@ Your project runtime also continues working, but your hydra does not respond.
 ![alt text](http://i.imgur.com/j4UAp8t.png "DLL not found Error")
 
 Also you search your log file and find 
+
 ![alt text](http://i.imgur.com/jy6nsmX.png "Log of DLL not found Error")
 
 **Fix:** This error means the sixense dll file is missing.
