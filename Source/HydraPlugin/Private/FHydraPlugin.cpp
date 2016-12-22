@@ -15,7 +15,6 @@
 #include <windows.h>
 
 #define LOCTEXT_NAMESPACE "HydraPlugin"
-#define PLUGIN_VERSION "0.9.1"
 #define HYDRA_HISTORY_MAX 5	//5 frame history for data
 DEFINE_LOG_CATEGORY_STATIC(HydraPluginLog, Log, All);
 
@@ -284,7 +283,7 @@ public:
 	FHydraController(const TSharedRef< FGenericApplicationMessageHandler >& InMessageHandler)
 		: MessageHandler(InMessageHandler), pluginPointer(nullptr)
 	{
-		UE_LOG(HydraPluginLog, Log, TEXT("Attempting to startup Hydra Module, v%s"), TEXT(PLUGIN_VERSION));
+		UE_LOG(HydraPluginLog, Log, TEXT("Attempting to startup Hydra Module"));
 
 		collector = new DataCollector;
 
