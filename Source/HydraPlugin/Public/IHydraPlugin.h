@@ -3,10 +3,8 @@
 #pragma once
 
 #include "ModuleManager.h"
+#include "HydraControllerComponent.h"
 #include "IInputDeviceModule.h"
-
-class HydraDataDelegate;
-class UHydraPluginComponent;
 
 /**
  * The public interface to this module
@@ -37,7 +35,14 @@ public:
 		return FModuleManager::Get().IsModuleLoaded( "HydraPlugin" );
 	}
 
-	virtual HydraDataDelegate* DataDelegate(){ return nullptr; };
-	virtual void DeferedAddDelegate(UHydraPluginComponent* delegate) {};
+	virtual void SetCalibrationTransform(const FTransform& CalibrationTransform) {};
+	virtual FTransform GetCalibrationTransform() { return FTransform(); };
+	virtual bool IsPluggedInAndEnabled() { return false; };
+
+	virtual void AddComponentDelegate(UHydraControllerComponent* delegateComponent) {};
+	virtual void RemoveComponentDelegate(UHydraControllerComponent* delegateComponent) {};
+
+	virtual bool LeftHandData(FHydraControllerData& OutData) { return false; }
+	virtual bool RightHandData(FHydraControllerData& OutData) { return false; }
 };
 

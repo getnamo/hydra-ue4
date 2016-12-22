@@ -3,11 +3,10 @@
 #include "IHydraPlugin.h"
 #include "IMotionController.h"
 
-#include "HydraDataDelegate.h"
-#include "HydraSingleController.h"
 #include "SlateBasics.h"
 #include "IPluginManager.h"
-#include "HydraComponent.h"
+#include "HydraControllerComponent.h"
+#include "HydraUtility.h"
 
 #include <iostream>
 #include <stdexcept>
@@ -16,10 +15,12 @@
 #include <windows.h>
 
 #define LOCTEXT_NAMESPACE "HydraPlugin"
-#define PLUGIN_VERSION "0.8.10"
+#define HYDRA_HISTORY_MAX 2				//frame history for data, shrunken to minimum 2 frame history for acceleration
 DEFINE_LOG_CATEGORY_STATIC(HydraPluginLog, Log, All);
 
 //Private API - This is where the magic happens
+
+#pragma region DLLImport
 
 //DLL import definition
 typedef int (*dll_sixenseInit)(void);
@@ -30,74 +31,56 @@ dll_sixenseInit HydraInit;
 dll_sixenseExit HydraExit;
 dll_sixenseGetAllNewestData HydraGetAllNewestData;
 
-class HydraUtilityTimer
+#pragma endregion DLLImport
+
+#pragma region FHydraPlugin - Declaration
+
+//Forward declaration
+class FHydraPlugin : public IHydraPlugin
 {
-	int64 TickTime = 0;
-	int64 TockTime = 0;
+	FTransform CalibrationTransform;
+	class FHydraController* controllerReference = nullptr;
+	TArray<UHydraControllerComponent*> ComponentDelegates;
+	bool inputDeviceCreated = false;
+
 public:
-	HydraUtilityTimer()
-	{
-		tick();
-	}
 
-	double unixTimeNow()
-	{
-		FDateTime timeUtc = FDateTime::UtcNow();
-		return timeUtc.ToUnixTimestamp() * 10000 + timeUtc.GetMillisecond();
-	}
+	virtual TSharedPtr< class IInputDevice > CreateInputDevice(const TSharedRef< FGenericApplicationMessageHandler >& InMessageHandler) override;
 
-	void tick()
-	{
-		TickTime = unixTimeNow();
-	}
+	virtual void AddComponentDelegate(UHydraControllerComponent* delegateComponent) override;
 
-	//return time elapsed in seconds
-	float tock()
-	{
-		TockTime = unixTimeNow();
-		return (TockTime - TickTime)/1000.f;
-	}
+	virtual void RemoveComponentDelegate(UHydraControllerComponent* delegateComponent) override;
+
+	virtual void SetCalibrationTransform(const FTransform& InCalibrationTransform) override;
+
+	virtual FTransform GetCalibrationTransform() override;
+
+	virtual bool IsPluggedInAndEnabled() override;
+	virtual bool LeftHandData(FHydraControllerData& OutData) override;
+	virtual bool RightHandData(FHydraControllerData& OutData) override;
+
+	//Call this function on all the attached plugin component delegates
+	void CallFunctionOnDelegates(TFunction< void(UHydraControllerComponent*)> InFunction);
 };
 
-//UE v4.6 IM event wrappers
-bool EmitKeyUpEventForKey(FKey key, int32 user, bool repeat)
-{
-	FKeyEvent KeyEvent(key, FSlateApplication::Get().GetModifierKeys(), user, repeat, 0, 0);
-	return FSlateApplication::Get().ProcessKeyUpEvent(KeyEvent);
-}
+#pragma endregion FHydraPlugin - Declaration
 
-bool EmitKeyDownEventForKey(FKey key, int32 user, bool repeat)
-{
-	FKeyEvent KeyEvent(key, FSlateApplication::Get().GetModifierKeys(), user, repeat, 0, 0);
-	return FSlateApplication::Get().ProcessKeyDownEvent(KeyEvent);
-}
-
-bool EmitAnalogInputEventForKey(FKey key, float value, int32 user, bool repeat)
-{
-	FAnalogInputEvent AnalogInputEvent(key, FSlateApplication::Get().GetModifierKeys(), user, repeat, 0, 0, value);
-	return FSlateApplication::Get().ProcessAnalogInputEvent(AnalogInputEvent);
-}
+#pragma region DataCollector
 
 //Collector class contains all the data captured from .dll and delegate data will point to this structure (allDataUE and historicalDataUE).
 class DataCollector
 {
 public:
-	DataCollector()
+	DataCollector() :
+		LatestLeft(nullptr),
+		LatestRight(nullptr)
 	{
-		allData = new sixenseAllControllerData;
-		allDataUE = new sixenseAllControllerDataUE;
-		historicalDataUE = new sixenseAllControllerDataUE[10];
-	}
-	~DataCollector()
-	{
-		delete allData;
-		delete allDataUE;
-		delete[] historicalDataUE;
+
 	}
 
-	sixenseControllerDataUE ConvertData(sixenseControllerData* data, FVector offset = FVector(0,0,0))
+	SixenseControllerDataUE ConvertData(sixenseControllerData* data, FVector offset = FVector(0,0,0))
 	{
-		sixenseControllerDataUE converted;
+		SixenseControllerDataUE converted;
 
 		//Convert Sixense Axis to Unreal: UnrealX = - SixenseZ   UnrealY = SixenseX   UnrealZ = SixenseY
 		converted.rawPosition = FVector(-data->pos[2] / 10, data->pos[0] / 10, data->pos[1] / 10);					//converted to cm from mm
@@ -106,6 +89,7 @@ public:
 		converted.rotation = FRotator(converted.quat);																//convert once and re-use in blueprints
 		converted.joystick = FVector2D(data->joystick_x, data->joystick_y);
 		converted.trigger = data->trigger;
+		converted.trigger_pressed = (converted.trigger > 0.5f);
 		converted.buttons = data->buttons;
 		converted.sequence_number = data->sequence_number;
 		converted.firmware_revision = data->firmware_revision;
@@ -121,48 +105,188 @@ public:
 		return converted;
 	}
 
+	//todo: add yaw rotational offset support?
 	void ConvertAllData(FVector offset = FVector(0, 0, 0))
 	{
-		allDataUE->enabledCount = 0;
+		AllDataUE.enabledCount = 0;
 
 		for (int i = 0; i < MAX_CONTROLLERS_SUPPORTED; i++)
 		{
-			allDataUE->controllers[i] = ConvertData(&allData->controllers[i], offset);
-			if (allDataUE->controllers[i].enabled){
-				allDataUE->enabledCount++;
+			AllDataUE.controllers[i] = ConvertData(&AllSixenseData.controllers[i], offset);
+			if (AllDataUE.controllers[i].enabled){
+				AllDataUE.enabledCount++;
+			}
+
+			//update latest pointers
+			if (AllDataUE.controllers[i].which_hand == (uint8)EHydraControllerHand::HYDRA_HAND_LEFT)
+			{
+				LatestLeft = &AllDataUE.controllers[i];
+			}
+			else if (AllDataUE.controllers[i].which_hand == (uint8)EHydraControllerHand::HYDRA_HAND_RIGHT)
+			{
+				LatestRight = &AllDataUE.controllers[i];
 			}
 		}
 	}
 
-	sixenseAllControllerDataUE* allDataUE;
-	sixenseAllControllerData* allData;
-	sixenseAllControllerDataUE* historicalDataUE;
+	void GetLatestData(const FVector& Offset)
+	{
+		int success = HydraGetAllNewestData(&AllSixenseData);
+		if (success == SIXENSE_FAILURE) {
+			UE_LOG(HydraPluginLog, Error, TEXT("Hydra Error! Failed to get freshest data."));
+			return;
+		}
+		//if the hydras are unavailable don't try to get more information
+		if (!AllDataUE.available) {
+			UE_LOG(HydraPluginLog, Log, TEXT("Collector data not available."));
+			return;
+		}
+
+		ConvertAllData(Offset);
+
+		//Set all historical data
+		for (int i = 0; i < HYDRA_HISTORY_MAX-1; i++)
+		{
+			HistoricalDataUE[i+1] = HistoricalDataUE[i];
+		}
+
+		//latest
+		HistoricalDataUE[0] = AllDataUE;
+
+		//left/right pointers
+
+	}
+
+	sixenseAllControllerData AllSixenseData;
+	SixenseControllerDataUE* LatestLeft;
+	SixenseControllerDataUE* LatestRight;
+
+	SixenseAllControllerDataUE AllDataUE;
+	SixenseAllControllerDataUE HistoricalDataUE[HYDRA_HISTORY_MAX];
 };
 
+#pragma endregion DataCollector
+
+#pragma region FHydraController
+
+class FHydraPlugin;
+
+struct FHydraKeyMap 
+{
+	FKey HydraKey;
+	FKey MotionControllerKey;
+
+	FHydraKeyMap(const FKey& InHydra, const FKey& InMCKey)
+	{
+		HydraKey = InHydra;
+		MotionControllerKey = InMCKey;
+	}
+};
 
 class FHydraController : public IInputDevice, public IMotionController
 {	
 
 public:
-	DataCollector *collector;
-	HydraDataDelegate* hydraDelegate;
+	DataCollector* collector;
+	FHydraPlugin* pluginPointer;
+
 	void* DLLHandle;
 	HydraUtilityTimer UtilityTimer;
 
 	/** handler to send all messages to */
 	TSharedRef<FGenericApplicationMessageHandler> MessageHandler;
+
+	TArray<FHydraKeyMap> LeftKeyMap;
+	TArray<FHydraKeyMap> RightKeyMap;
 	
+	void AddInputMappingKeys()
+	{
+		//Docking
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftDocked, LOCTEXT("HydraLeftDocked", "Hydra (L) Docked"), FKeyDetails::GamepadKey));
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightDocked, LOCTEXT("HydraRightDocked", "Hydra (R) Docked"), FKeyDetails::GamepadKey));
+
+		//Left
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftJoystickX, LOCTEXT("HydraLeftJoystickX", "Hydra (L) Joystick X"), FKeyDetails::FloatAxis));
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftJoystickY, LOCTEXT("HydraLeftJoystickY", "Hydra (L) Joystick Y"), FKeyDetails::FloatAxis));
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftJoystickClick, LOCTEXT("HydraLeftJoystickClick", "Hydra (L) Joystick Click"), FKeyDetails::GamepadKey));
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftB1, LOCTEXT("HydraLeftB1", "Hydra (L) B1"), FKeyDetails::GamepadKey));
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftB2, LOCTEXT("HydraLeftB2", "Hydra (L) B2"), FKeyDetails::GamepadKey));
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftB3, LOCTEXT("HydraLeftB3", "Hydra (L) B3"), FKeyDetails::GamepadKey));
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftB4, LOCTEXT("HydraLeftB4", "Hydra (L) B4"), FKeyDetails::GamepadKey));
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftStart, LOCTEXT("HydraLeftStart", "Hydra (L) Start"), FKeyDetails::GamepadKey));
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftTrigger, LOCTEXT("HydraLeftTrigger", "Hydra (L) Trigger"), FKeyDetails::FloatAxis));
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftTriggerClick, LOCTEXT("HydraLeftTriggerClick", "Hydra (L) Trigger Click"), FKeyDetails::GamepadKey));
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftBumper, LOCTEXT("HydraLeftBumper", "Hydra (L) Bumper"), FKeyDetails::GamepadKey));
+
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftMotionX, LOCTEXT("HydraLeftMotionX", "Hydra (L) Motion X"), FKeyDetails::FloatAxis));
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftMotionY, LOCTEXT("HydraLeftMotionY", "Hydra (L) Motion Y"), FKeyDetails::FloatAxis));
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftMotionZ, LOCTEXT("HydraLeftMotionZ", "Hydra (L) Motion Z"), FKeyDetails::FloatAxis));
+
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftRotationPitch, LOCTEXT("HydraLeftRotationPitch", "Hydra (L) Rotation Pitch"), FKeyDetails::FloatAxis));
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftRotationYaw, LOCTEXT("HydraLeftRotationYaw", "Hydra (L) Rotation Yaw"), FKeyDetails::FloatAxis));
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftRotationRoll, LOCTEXT("HydraLeftRotationRoll", "Hydra (L) Rotation Roll"), FKeyDetails::FloatAxis));
+
+		//Right
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightJoystickX, LOCTEXT("HydraRightJoystickX", "Hydra (R) Joystick X"), FKeyDetails::FloatAxis));
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightJoystickY, LOCTEXT("HydraRightJoystickY", "Hydra (R) Joystick Y"), FKeyDetails::FloatAxis));
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightJoystickClick, LOCTEXT("HydraRightJoystickClick", "Hydra (R) Joystick Click"), FKeyDetails::GamepadKey));
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightB1, LOCTEXT("HydraRightB1", "Hydra (R) B1"), FKeyDetails::GamepadKey));
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightB2, LOCTEXT("HydraRightB2", "Hydra (R) B2"), FKeyDetails::GamepadKey));
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightB3, LOCTEXT("HydraRightB3", "Hydra (R) B3"), FKeyDetails::GamepadKey));
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightB4, LOCTEXT("HydraRightB4", "Hydra (R) B4"), FKeyDetails::GamepadKey));
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightStart, LOCTEXT("HydraRightStart", "Hydra (R) Start"), FKeyDetails::GamepadKey));
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightTrigger, LOCTEXT("HydraRightTrigger", "Hydra (R) Trigger"), FKeyDetails::FloatAxis));
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightTriggerClick, LOCTEXT("HydraRightTriggerClick", "Hydra (R) Trigger Click"), FKeyDetails::GamepadKey));
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightBumper, LOCTEXT("HydraRightBumper", "Hydra (R) Bumper"), FKeyDetails::GamepadKey));
+
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightMotionX, LOCTEXT("HydraRightMotionX", "Hydra (R) Motion X"), FKeyDetails::FloatAxis));
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightMotionY, LOCTEXT("HydraRightMotionY", "Hydra (R) Motion Y"), FKeyDetails::FloatAxis));
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightMotionZ, LOCTEXT("HydraRightMotionZ", "Hydra (R) Motion Z"), FKeyDetails::FloatAxis));
+
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightRotationPitch, LOCTEXT("HydraRightRotationPitch", "Hydra (R) Rotation Pitch"), FKeyDetails::FloatAxis));
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightRotationYaw, LOCTEXT("HydraRightRotationYaw", "Hydra (R) Rotation Yaw"), FKeyDetails::FloatAxis));
+		EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightRotationRoll, LOCTEXT("HydraRightRotationRoll", "Hydra (R) Rotation Roll"), FKeyDetails::FloatAxis));
+
+		//Add it according to the HydraEnum keys, NB: do not desync from the keys!
+		/*
+		HYDRA_BUTTON_B1,
+		HYDRA_BUTTON_B2,
+		HYDRA_BUTTON_B3,
+		HYDRA_BUTTON_B4,
+		HYDRA_BUTTON_START,
+		HYDRA_BUTTON_JOYSTICK,
+		HYDRA_BUTTON_BUMPER,
+		HYDRA_BUTTON_TRIGGER
+		*/
+
+		LeftKeyMap.Empty();
+		LeftKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraLeftB1, FGamepadKeyNames::MotionController_Left_FaceButton1));
+		LeftKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraLeftB2, FGamepadKeyNames::MotionController_Left_FaceButton2));
+		LeftKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraLeftB3, FGamepadKeyNames::MotionController_Left_FaceButton3));
+		LeftKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraLeftB4, FGamepadKeyNames::MotionController_Left_FaceButton4));
+		LeftKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraLeftStart, FGamepadKeyNames::MotionController_Left_FaceButton5));
+		LeftKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraLeftJoystickClick, FGamepadKeyNames::MotionController_Left_FaceButton6));
+		LeftKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraLeftBumper, FGamepadKeyNames::MotionController_Left_Shoulder));
+		LeftKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraLeftTriggerClick, FGamepadKeyNames::MotionController_Left_Trigger));
+
+		RightKeyMap.Empty();
+		RightKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraRightB1, FGamepadKeyNames::MotionController_Right_FaceButton1));
+		RightKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraRightB2, FGamepadKeyNames::MotionController_Right_FaceButton2));
+		RightKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraRightB3, FGamepadKeyNames::MotionController_Right_FaceButton3));
+		RightKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraRightB4, FGamepadKeyNames::MotionController_Right_FaceButton4));
+		RightKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraRightStart, FGamepadKeyNames::MotionController_Right_FaceButton5));
+		RightKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraRightJoystickClick, FGamepadKeyNames::MotionController_Right_FaceButton6));
+		RightKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraRightBumper, FGamepadKeyNames::MotionController_Right_Shoulder));
+		RightKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraRightTriggerClick, FGamepadKeyNames::MotionController_Right_Trigger));
+	}
 
 	//Init and Runtime
 	FHydraController(const TSharedRef< FGenericApplicationMessageHandler >& InMessageHandler)
-		: MessageHandler(InMessageHandler)
+		: MessageHandler(InMessageHandler), pluginPointer(nullptr)
 	{
-		UE_LOG(HydraPluginLog, Log, TEXT("Attempting to startup Hydra Module, v%s"), TEXT(PLUGIN_VERSION));
+		UE_LOG(HydraPluginLog, Log, TEXT("Attempting to startup Hydra Module"));
 
 		collector = new DataCollector;
-		hydraDelegate = new HydraDataDelegate;
-		hydraDelegate->HydraLatestData = collector->allDataUE;	//set the delegate latest data pointer
-		hydraDelegate->HydraHistoryData = collector->historicalDataUE;
 
 		//This is a fixed relative path, meaning this file needs to exist for the plugin to work, even in shipping build!
 		//Todo: fix path lookup when packaged
@@ -212,60 +336,14 @@ public:
 		HydraExit = (dll_sixenseExit)FPlatformProcess::GetDllExport(DLLHandle, TEXT("sixenseExit"));
 		HydraGetAllNewestData = (dll_sixenseGetAllNewestData)FPlatformProcess::GetDllExport(DLLHandle, TEXT("sixenseGetAllNewestData"));
 
-		collector->allDataUE->available = (HydraInit() == SIXENSE_SUCCESS);
+		collector->AllDataUE.available = (HydraInit() == SIXENSE_SUCCESS);
 
-		if (collector->allDataUE->available)
+		if (collector->AllDataUE.available)
 		{
 			UE_LOG(HydraPluginLog, Log, TEXT("Hydra Available."));
 
 			//Attach all EKeys
-
-			//Misc
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftDocked, LOCTEXT("HydraLeftDocked", "Hydra Left Docked"), FKeyDetails::GamepadKey));
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightDocked, LOCTEXT("HydraRightDocked", "Hydra Right Docked"), FKeyDetails::GamepadKey));
-
-			//Left
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftJoystickX, LOCTEXT("HydraLeftJoystickX", "Hydra Left Joystick X"), FKeyDetails::FloatAxis));
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftJoystickY, LOCTEXT("HydraLeftJoystickY", "Hydra Left Joystick Y"), FKeyDetails::FloatAxis));
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftJoystickClick, LOCTEXT("HydraLeftJoystickClick", "Hydra Left Joystick Click"), FKeyDetails::GamepadKey));
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftB1, LOCTEXT("HydraLeftB1", "Hydra Left B1"), FKeyDetails::GamepadKey));
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftB2, LOCTEXT("HydraLeftB2", "Hydra Left B2"), FKeyDetails::GamepadKey));
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftB3, LOCTEXT("HydraLeftB3", "Hydra Left B3"), FKeyDetails::GamepadKey));
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftB4, LOCTEXT("HydraLeftB4", "Hydra Left B4"), FKeyDetails::GamepadKey));
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftStart, LOCTEXT("HydraLeftStart", "Hydra Left Start"), FKeyDetails::GamepadKey));
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftTrigger, LOCTEXT("HydraLeftTrigger", "Hydra Left Trigger"), FKeyDetails::FloatAxis));
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftTriggerClick, LOCTEXT("HydraLeftTriggerClick", "Hydra Left Trigger Click"), FKeyDetails::GamepadKey));
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftBumper, LOCTEXT("HydraLeftBumper", "Hydra Left Bumper"), FKeyDetails::GamepadKey));
-
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftMotionX, LOCTEXT("HydraLeftMotionX", "Hydra Left Motion X"), FKeyDetails::FloatAxis));
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftMotionY, LOCTEXT("HydraLeftMotionY", "Hydra Left Motion Y"), FKeyDetails::FloatAxis));
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftMotionZ, LOCTEXT("HydraLeftMotionZ", "Hydra Left Motion Z"), FKeyDetails::FloatAxis));
-
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftRotationPitch, LOCTEXT("HydraLeftRotationPitch", "Hydra Left Rotation Pitch"), FKeyDetails::FloatAxis));
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftRotationYaw, LOCTEXT("HydraLeftRotationYaw", "Hydra Left Rotation Yaw"), FKeyDetails::FloatAxis));
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraLeftRotationRoll, LOCTEXT("HydraLeftRotationRoll", "Hydra Left Rotation Roll"), FKeyDetails::FloatAxis));
-
-			//Right
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightJoystickX, LOCTEXT("HydraRightJoystickX", "Hydra Right Joystick X"), FKeyDetails::FloatAxis));
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightJoystickY, LOCTEXT("HydraRightJoystickY", "Hydra Right Joystick Y"), FKeyDetails::FloatAxis));
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightJoystickClick, LOCTEXT("HydraRightJoystickClick", "Hydra Right Joystick Click"), FKeyDetails::GamepadKey));
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightB1, LOCTEXT("HydraRightB1", "Hydra Right B1"), FKeyDetails::GamepadKey));
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightB2, LOCTEXT("HydraRightB2", "Hydra Right B2"), FKeyDetails::GamepadKey));
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightB3, LOCTEXT("HydraRightB3", "Hydra Right B3"), FKeyDetails::GamepadKey));
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightB4, LOCTEXT("HydraRightB4", "Hydra Right B4"), FKeyDetails::GamepadKey));
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightStart, LOCTEXT("HydraRightStart", "Hydra Right Start"), FKeyDetails::GamepadKey));
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightTrigger, LOCTEXT("HydraRightTrigger", "Hydra Right Trigger"), FKeyDetails::FloatAxis));
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightTriggerClick, LOCTEXT("HydraRightTriggerClick", "Hydra Right Trigger Click"), FKeyDetails::GamepadKey));
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightBumper, LOCTEXT("HydraRightBumper", "Hydra Right Bumper"), FKeyDetails::GamepadKey));
-
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightMotionX, LOCTEXT("HydraRightMotionX", "Hydra Right Motion X"), FKeyDetails::FloatAxis));
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightMotionY, LOCTEXT("HydraRightMotionY", "Hydra Right Motion Y"), FKeyDetails::FloatAxis));
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightMotionZ, LOCTEXT("HydraRightMotionZ", "Hydra Right Motion Z"), FKeyDetails::FloatAxis));
-
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightRotationPitch, LOCTEXT("HydraRightRotationPitch", "Hydra Right Rotation Pitch"), FKeyDetails::FloatAxis));
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightRotationYaw, LOCTEXT("HydraRightRotationYaw", "Hydra Right Rotation Yaw"), FKeyDetails::FloatAxis));
-			EKeys::AddKey(FKeyDetails(EKeysHydra::HydraRightRotationRoll, LOCTEXT("HydraRightRotationRoll", "Hydra Right Rotation Roll"), FKeyDetails::FloatAxis));
-
+			AddInputMappingKeys();
 		}
 		else
 		{
@@ -292,30 +370,41 @@ public:
 			UE_LOG(HydraPluginLog, Log, TEXT("Hydra Clean shutdown."));
 		}
 
-		delete hydraDelegate;
 		delete collector;
-
-		
 	}
 
 	virtual void Tick(float DeltaTime) override
 	{
-		//Update Data History
+
 	}
 
 	virtual void SendControllerEvents() override
 	{
 		//Use late sampling attached to SendControllerEvents
-		DelegateUpdateAllData(-1.f);	//-1 signifies we should use our internal utility timer for elapsed time
-		DelegateEventTick();
+		HydraInputTick();
 	}
 
 
 	virtual ETrackingStatus GetControllerTrackingStatus(const int32 ControllerIndex, const EControllerHand DeviceHand) const
 	{
-		UHydraSingleController* controller = hydraDelegate->HydraControllerForControllerHand(DeviceHand);
+		//Check if we're plugged in
+		if (!pluginPointer->IsPluggedInAndEnabled())
+		{
+			return ETrackingStatus::NotTracked;
+		}
 
-		if (controller != nullptr && !controller->docked)
+		//Get data to see if we're tracked
+		FHydraControllerData Controller;
+		if (DeviceHand == EControllerHand::Left)
+		{
+			pluginPointer->LeftHandData(Controller);
+		}
+		else if (DeviceHand == EControllerHand::Right)
+		{
+			pluginPointer->RightHandData(Controller);
+		}
+		
+		if (Controller.Enabled && !Controller.Docked)
 		{
 			return ETrackingStatus::Tracked;
 		}
@@ -340,14 +429,23 @@ public:
 	{
 		bool RetVal = false;
 		
-		UHydraSingleController* controller = hydraDelegate->HydraControllerForControllerHand(DeviceHand);
-
-		if (controller != nullptr && controller->enabled && !controller->docked)
+		FHydraControllerData Controller;
+		if (DeviceHand == EControllerHand::Left)
 		{
-			OutOrientation = controller->orientation;
-			OutPosition = controller->position  * (GetWorldScale() / 100.f);
-			RetVal = true;
+			RetVal = pluginPointer->LeftHandData(Controller);
 		}
+		else if (DeviceHand == EControllerHand::Right)
+		{
+			RetVal = pluginPointer->RightHandData(Controller);
+		}
+
+		if (!Controller.Enabled || Controller.Docked)
+		{
+			return false;
+		}
+
+		OutPosition = Controller.Position;
+		OutOrientation = Controller.Orientation;
 
 		return RetVal;
 	}
@@ -370,579 +468,359 @@ public:
 
 private:
 	//Delegate Private functions
-	void DelegateUpdateAllData(float DeltaTime);
-	void DelegateCheckEnabledCount(bool* plugNotChecked);
-	void DelegateEventTick();
+	void HydraInputTick();
+
+	void BroadcastButtonChangeForController(EHydraControllerButton Button, const FHydraControllerData& Latest, bool ButtonPressed);
+	void BroadcastButtonPressForController(EHydraControllerButton Button, const FHydraControllerData& Controller);
+	void BroadcastButtonReleaseForController(EHydraControllerButton Button, const FHydraControllerData& Controller);
 };
-
-
-//Public API Implementation
 
 
 /** Delegate Functions, called by plugin to keep data in sync and to emit the events.*/
-void FHydraController::DelegateUpdateAllData(float DeltaTime)
-{
-	//Tick-tock the timer
-	float timeElapsedSinceUpdate = UtilityTimer.tock();
-	UtilityTimer.tick();
-
-	if (DeltaTime < 0) 
-	{
-		DeltaTime = timeElapsedSinceUpdate;
-	}
-
-	//Get the freshest Data
-	int success = HydraGetAllNewestData(collector->allData);
-	if (success == SIXENSE_FAILURE){
-		UE_LOG(HydraPluginLog, Error, TEXT("Hydra Error! Failed to get freshest data."));
-		return;
-	}
-	//if the hydras are unavailable don't try to get more information
-	if (!collector->allDataUE->available){
-		UE_LOG(HydraPluginLog, Log, TEXT("Collector data not available."));
-		return;
-	}
-
-	//convert and pass the data to the delegate, this step also adds the base offset
-	collector->ConvertAllData(hydraDelegate->baseOffset);
-
-	//Update all historical links
-	hydraDelegate->HydraHistoryData[9] = hydraDelegate->HydraHistoryData[8];
-	hydraDelegate->HydraHistoryData[8] = hydraDelegate->HydraHistoryData[7];
-	hydraDelegate->HydraHistoryData[7] = hydraDelegate->HydraHistoryData[6];
-	hydraDelegate->HydraHistoryData[6] = hydraDelegate->HydraHistoryData[5];
-	hydraDelegate->HydraHistoryData[5] = hydraDelegate->HydraHistoryData[4];
-	hydraDelegate->HydraHistoryData[4] = hydraDelegate->HydraHistoryData[3];
-	hydraDelegate->HydraHistoryData[3] = hydraDelegate->HydraHistoryData[2];
-	hydraDelegate->HydraHistoryData[2] = hydraDelegate->HydraHistoryData[1];
-	hydraDelegate->HydraHistoryData[1] = hydraDelegate->HydraHistoryData[0];
-
-	//Add in all the integrated data (acceleration/velocity etc)
-	sixenseControllerDataUE* controller;
-	sixenseControllerDataUE* previous;
-
-	float DeltaSquared = (DeltaTime*DeltaTime);
-
-	for (int i = 0; i < MAX_CONTROLLERS_SUPPORTED; i++)
-	{
-		controller = &hydraDelegate->HydraLatestData->controllers[i];
-		previous = &hydraDelegate->HydraHistoryData[0].controllers[i];
-
-		//Trigger 
-		if (controller->trigger < 0.5)
-		{
-			controller->trigger_pressed = false;
-		}
-		else{
-			controller->trigger_pressed = true;
-		}
-
-		//Calculate Velocity, Acceleration, and angular velocity
-		controller->velocity = (controller->position - previous->position) / DeltaTime;
-		controller->acceleration = (controller->velocity - previous->velocity) / DeltaTime;
-		controller->angular_velocity = FRotator(controller->quat - previous->quat);	//unscaled by delta time	
-		controller->angular_velocity = FRotator(controller->angular_velocity.Pitch / DeltaSquared,
-			controller->angular_velocity.Yaw / DeltaSquared,
-			controller->angular_velocity.Roll / DeltaSquared);	//has to be scaled here to avoid clamping in the quaternion initialization
-	}
-
-	//Update the stored data with the integrated data obtained from latest
-	hydraDelegate->HydraHistoryData[0] = *hydraDelegate->HydraLatestData;
-}
-
-void FHydraController::DelegateCheckEnabledCount(bool* plugNotChecked)
-{
-	if (!*plugNotChecked) return;
-
-	sixenseAllControllerDataUE* previous = &hydraDelegate->HydraHistoryData[0];
-	int32 oldCount = previous->enabledCount;
-	int32 count = hydraDelegate->HydraLatestData->enabledCount;
-	if (oldCount != count)
-	{
-		if (count == 2)	//hydra controller number, STEM behavior undefined.
-		{
-			hydraDelegate->HydraPluggedIn();
-			*plugNotChecked = false;
-		}
-		else if (count == 0)
-		{
-			hydraDelegate->HydraUnplugged();
-			*plugNotChecked = false;
-		}
-	}
-}
-
-//Function used for consistent conversion to input mapping basis
-float MotionInputMappingConversion(float AxisValue){
-	return FMath::Clamp(AxisValue / 200.f, -1.f, 1.f);
-}
 
 /** Internal Tick - Called by the Plugin */
-void FHydraController::DelegateEventTick()
+void FHydraController::HydraInputTick()
 {
-	sixenseControllerDataUE* controller;
-	sixenseControllerDataUE* previous;
-	bool plugNotChecked = true;
+	//Update to our latest data
+	collector->GetLatestData(pluginPointer->GetCalibrationTransform().GetLocation());
 
-	//Trigger any delegate events
+	//run the loop and emit events
+	SixenseAllControllerDataUE& LatestSet = collector->AllDataUE;
+	SixenseAllControllerDataUE& PreviousSet = collector->HistoricalDataUE[1];
+
+	if (!LatestSet.isValidAndTracking())
+	{
+		return;
+	}
+
+	//Did our enabled count change?
+	if (LatestSet.enabledCount != PreviousSet.enabledCount)
+	{
+		//If we have a full enabled count we just plugged the hydra in
+		if (LatestSet.hasFullEnabledCount())
+		{
+			pluginPointer->CallFunctionOnDelegates([&](UHydraControllerComponent* Component)
+			{
+				Component->OnPluggedIn.Broadcast();
+			});
+		}
+		else
+		{
+			pluginPointer->CallFunctionOnDelegates([&](UHydraControllerComponent* Component)
+			{
+				Component->OnUnplugged.Broadcast();
+			});
+		}
+	}
+
 	for (int i = 0; i < MAX_CONTROLLERS_SUPPORTED; i++)
 	{
-		controller = &hydraDelegate->HydraLatestData->controllers[i];
-		previous = &hydraDelegate->HydraHistoryData[1].controllers[i];
+		FHydraControllerData Latest, Previous;
 
-		//Sync any extended data forms such as HydraSingleController, so that the correct instance values are sent and not 1 frame delayed
-		hydraDelegate->UpdateControllerReference(controller, i);
+		//Convert to organized UE struct
+		Latest.SetFromSixenseDataUE(LatestSet.controllers[i]);
+		Previous.SetFromSixenseDataUE(PreviousSet.controllers[i]);
 
-		//If it is enabled run through all the event notifications and data integration
-		if (controller->enabled)
+		//We don't care about disabled controllers
+		if (!Latest.Enabled)
 		{
-			//Enable Check
-			if (controller->enabled != previous->enabled)
+			continue;
+		}
+
+		//Store for future hand comparisons
+		bool leftHand = Latest.HandPossession == EHydraControllerHand::HYDRA_HAND_LEFT;
+
+		//Docking change
+		if (Latest.Docked != Previous.Docked)
+		{
+			if (Latest.Docked)
 			{
-				DelegateCheckEnabledCount(&plugNotChecked);
-				hydraDelegate->HydraControllerEnabled(i);
-
-				//Skip this loop, previous state comparisons will be wrong
-				continue;
+				pluginPointer->CallFunctionOnDelegates([&](UHydraControllerComponent* Component)
+				{
+					Component->ControllerDocked.Broadcast(Latest);
+				});
 			}
-
-			//Determine Hand to support dynamic input mapping
-			bool leftHand = hydraDelegate->HydraWhichHand(i) == 1;
-
-			//Docking
-			if (controller->is_docked != previous->is_docked)
+			else
 			{
-				if (controller->is_docked)
+				pluginPointer->CallFunctionOnDelegates([&](UHydraControllerComponent* Component)
 				{
-					hydraDelegate->HydraDocked(i);
-					if (leftHand)
-						EmitKeyDownEventForKey(EKeysHydra::HydraLeftDocked, 0, 0);
-					else
-						EmitKeyDownEventForKey(EKeysHydra::HydraRightDocked, 0, 0);
-				}
-				else{
-					hydraDelegate->HydraUndocked(i);
-					if (leftHand)
-						EmitKeyUpEventForKey(EKeysHydra::HydraLeftDocked, 0, 0);
-					else
-						EmitKeyUpEventForKey(EKeysHydra::HydraRightDocked, 0, 0);
-				}
-			}
-
-			//** Buttons */
-
-			if (controller->trigger != previous->trigger)
-			{
-				hydraDelegate->HydraTriggerChanged(i, controller->trigger);
-				//InputMapping
-				if (leftHand)
-				{
-					EmitAnalogInputEventForKey(EKeysHydra::HydraLeftTrigger, controller->trigger, 0, 0);
-					EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Left_TriggerAxis, controller->trigger, 0, 0);
-				}
-				else
-				{
-					EmitAnalogInputEventForKey(EKeysHydra::HydraRightTrigger, controller->trigger, 0, 0);
-					EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Right_TriggerAxis, controller->trigger, 0, 0);
-				}
-				if (controller->trigger_pressed != previous->trigger_pressed)
-				{
-
-					if (controller->trigger_pressed)
-					{
-						hydraDelegate->HydraButtonPressed(i, HYDRA_BUTTON_TRIGGER);
-						hydraDelegate->HydraTriggerPressed(i);
-						//InputMapping
-						if (leftHand)
-						{
-							EmitKeyDownEventForKey(EKeysHydra::HydraLeftTriggerClick, 0, 0);
-							EmitKeyDownEventForKey(FGamepadKeyNames::MotionController_Left_Trigger, 0, 0);
-						}
-						else
-						{
-							EmitKeyDownEventForKey(EKeysHydra::HydraRightTriggerClick, 0, 0);
-							EmitKeyDownEventForKey(FGamepadKeyNames::MotionController_Right_Trigger, 0, 0);
-						}
-					}
-					else{
-						hydraDelegate->HydraButtonReleased(i, HYDRA_BUTTON_TRIGGER);
-						hydraDelegate->HydraTriggerReleased(i);
-						//InputMapping
-						if (leftHand)
-						{
-							EmitKeyUpEventForKey(EKeysHydra::HydraLeftTriggerClick, 0, 0);
-							EmitKeyUpEventForKey(FGamepadKeyNames::MotionController_Left_Trigger, 0, 0);
-						}
-						else
-						{
-							EmitKeyUpEventForKey(EKeysHydra::HydraRightTriggerClick, 0, 0);
-							EmitKeyUpEventForKey(FGamepadKeyNames::MotionController_Right_Trigger, 0, 0);
-						}
-					}
-				}
-			}
-
-			//Bumper
-			if ((controller->buttons & SIXENSE_BUTTON_BUMPER) != (previous->buttons & SIXENSE_BUTTON_BUMPER))
-			{
-				if ((controller->buttons & SIXENSE_BUTTON_BUMPER) == SIXENSE_BUTTON_BUMPER)
-				{
-					hydraDelegate->HydraButtonPressed(i, HYDRA_BUTTON_BUMPER);
-					hydraDelegate->HydraBumperPressed(i);
-					//InputMapping
-					if (leftHand)
-					{
-						EmitKeyDownEventForKey(EKeysHydra::HydraLeftBumper, 0, 0);
-						EmitKeyDownEventForKey(FGamepadKeyNames::MotionController_Left_Shoulder, 0, 0);
-					}
-					else
-					{
-						EmitKeyDownEventForKey(EKeysHydra::HydraRightBumper, 0, 0);
-						EmitKeyDownEventForKey(FGamepadKeyNames::MotionController_Right_Shoulder, 0, 0);
-					}
-				}
-				else{
-					hydraDelegate->HydraButtonReleased(i, HYDRA_BUTTON_BUMPER);
-					hydraDelegate->HydraBumperReleased(i);
-					//InputMapping
-					if (leftHand)
-					{
-						EmitKeyUpEventForKey(EKeysHydra::HydraLeftBumper, 0, 0);
-						EmitKeyUpEventForKey(FGamepadKeyNames::MotionController_Left_Shoulder, 0, 0);
-					}
-					else
-					{
-						EmitKeyUpEventForKey(EKeysHydra::HydraRightBumper, 0, 0);
-						EmitKeyUpEventForKey(FGamepadKeyNames::MotionController_Right_Shoulder, 0, 0);
-					}
-				}
-			}
-
-			//B1
-			if ((controller->buttons & SIXENSE_BUTTON_1) != (previous->buttons & SIXENSE_BUTTON_1))
-			{
-				if ((controller->buttons & SIXENSE_BUTTON_1) == SIXENSE_BUTTON_1)
-				{
-					hydraDelegate->HydraButtonPressed(i, HYDRA_BUTTON_B1);
-					hydraDelegate->HydraB1Pressed(i);
-					//InputMapping
-					if (leftHand)
-					{
-						EmitKeyDownEventForKey(EKeysHydra::HydraLeftB1, 0, 0);
-						EmitKeyDownEventForKey(FGamepadKeyNames::MotionController_Left_FaceButton1, 0, 0);
-					}
-					else
-					{
-						EmitKeyDownEventForKey(EKeysHydra::HydraRightB1, 0, 0);
-						EmitKeyDownEventForKey(FGamepadKeyNames::MotionController_Right_FaceButton1, 0, 0);
-					}
-				}
-				else{
-					hydraDelegate->HydraButtonReleased(i, HYDRA_BUTTON_B1);
-					hydraDelegate->HydraB1Released(i);
-					//InputMapping
-					if (leftHand)
-					{
-						EmitKeyUpEventForKey(EKeysHydra::HydraLeftB1, 0, 0);
-						EmitKeyUpEventForKey(FGamepadKeyNames::MotionController_Left_FaceButton1, 0, 0);
-					}
-					else
-					{
-						EmitKeyUpEventForKey(EKeysHydra::HydraRightB1, 0, 0);
-						EmitKeyUpEventForKey(FGamepadKeyNames::MotionController_Right_FaceButton1, 0, 0);
-					}
-				}
-			}
-			//B2
-			if ((controller->buttons & SIXENSE_BUTTON_2) != (previous->buttons & SIXENSE_BUTTON_2))
-			{
-				if ((controller->buttons & SIXENSE_BUTTON_2) == SIXENSE_BUTTON_2)
-				{
-					hydraDelegate->HydraButtonPressed(i, HYDRA_BUTTON_B2);
-					hydraDelegate->HydraB2Pressed(i);
-					//InputMapping
-					if (leftHand)
-					{
-						EmitKeyDownEventForKey(EKeysHydra::HydraLeftB2, 0, 0);
-						EmitKeyDownEventForKey(FGamepadKeyNames::MotionController_Left_FaceButton2, 0, 0);
-					}
-					else
-					{
-						EmitKeyDownEventForKey(EKeysHydra::HydraRightB2, 0, 0);
-						EmitKeyDownEventForKey(FGamepadKeyNames::MotionController_Right_FaceButton2, 0, 0);
-					}
-				}
-				else{
-					hydraDelegate->HydraButtonReleased(i, HYDRA_BUTTON_B2);
-					hydraDelegate->HydraB2Released(i);
-					//InputMapping
-					if (leftHand)
-					{
-						EmitKeyUpEventForKey(EKeysHydra::HydraLeftB2, 0, 0);
-						EmitKeyUpEventForKey(FGamepadKeyNames::MotionController_Left_FaceButton2, 0, 0);
-					}
-					else
-					{
-						EmitKeyUpEventForKey(EKeysHydra::HydraRightB1, 0, 0);
-						EmitKeyUpEventForKey(FGamepadKeyNames::MotionController_Right_FaceButton2, 0, 0);
-					}
-				}
-			}
-			//B3
-			if ((controller->buttons & SIXENSE_BUTTON_3) != (previous->buttons & SIXENSE_BUTTON_3))
-			{
-				if ((controller->buttons & SIXENSE_BUTTON_3) == SIXENSE_BUTTON_3)
-				{
-					hydraDelegate->HydraButtonPressed(i, HYDRA_BUTTON_B3);
-					hydraDelegate->HydraB3Pressed(i);
-					//InputMapping
-					if (leftHand)
-					{
-						EmitKeyDownEventForKey(EKeysHydra::HydraLeftB3, 0, 0);
-						EmitKeyDownEventForKey(FGamepadKeyNames::MotionController_Left_FaceButton3, 0, 0);
-					}
-					else
-					{
-						EmitKeyDownEventForKey(EKeysHydra::HydraRightB3, 0, 0);
-						EmitKeyDownEventForKey(FGamepadKeyNames::MotionController_Right_FaceButton3, 0, 0);
-					}
-				}
-				else{
-					hydraDelegate->HydraButtonReleased(i, HYDRA_BUTTON_B3);
-					hydraDelegate->HydraB3Released(i);
-					//InputMapping
-					if (leftHand)
-					{
-						EmitKeyUpEventForKey(EKeysHydra::HydraLeftB3, 0, 0);
-						EmitKeyUpEventForKey(FGamepadKeyNames::MotionController_Left_FaceButton3, 0, 0);
-					}
-					else
-					{
-						EmitKeyUpEventForKey(EKeysHydra::HydraRightB3, 0, 0);
-						EmitKeyUpEventForKey(FGamepadKeyNames::MotionController_Right_FaceButton3, 0, 0);
-					}
-				}
-			}
-			//B4
-			if ((controller->buttons & SIXENSE_BUTTON_4) != (previous->buttons & SIXENSE_BUTTON_4))
-			{
-				if ((controller->buttons & SIXENSE_BUTTON_4) == SIXENSE_BUTTON_4)
-				{
-					hydraDelegate->HydraButtonPressed(i, HYDRA_BUTTON_B4);
-					hydraDelegate->HydraB4Pressed(i);
-					//InputMapping
-					if (leftHand)
-					{
-						EmitKeyDownEventForKey(EKeysHydra::HydraLeftB4, 0, 0);
-						EmitKeyDownEventForKey(FGamepadKeyNames::MotionController_Left_FaceButton4, 0, 0);
-					}
-					else
-					{
-						EmitKeyDownEventForKey(EKeysHydra::HydraRightB4, 0, 0);
-						EmitKeyDownEventForKey(FGamepadKeyNames::MotionController_Right_FaceButton4, 0, 0);
-					}
-				}
-				else{
-					hydraDelegate->HydraButtonReleased(i, HYDRA_BUTTON_B4);
-					hydraDelegate->HydraB4Released(i);
-					//InputMapping
-					if (leftHand)
-					{
-						EmitKeyUpEventForKey(EKeysHydra::HydraLeftB4, 0, 0);
-						EmitKeyUpEventForKey(FGamepadKeyNames::MotionController_Left_FaceButton4, 0, 0);
-					}
-					else
-					{
-						EmitKeyUpEventForKey(EKeysHydra::HydraRightB4, 0, 0);
-						EmitKeyUpEventForKey(FGamepadKeyNames::MotionController_Right_FaceButton4, 0, 0);
-					}
-				}
-			}
-
-			//Start
-			if ((controller->buttons & SIXENSE_BUTTON_START) != (previous->buttons & SIXENSE_BUTTON_START))
-			{
-				if ((controller->buttons & SIXENSE_BUTTON_START) == SIXENSE_BUTTON_START)
-				{
-					hydraDelegate->HydraButtonPressed(i, HYDRA_BUTTON_START);
-					hydraDelegate->HydraStartPressed(i);
-					//InputMapping
-					if (leftHand)
-					{
-						EmitKeyDownEventForKey(EKeysHydra::HydraLeftStart, 0, 0);
-						EmitKeyDownEventForKey(FGamepadKeyNames::MotionController_Left_FaceButton5, 0, 0);	//map start to button 5
-					}
-					else
-					{
-						EmitKeyDownEventForKey(EKeysHydra::HydraRightStart, 0, 0);
-						EmitKeyDownEventForKey(FGamepadKeyNames::MotionController_Right_FaceButton5, 0, 0);	//map start to button 5
-					}
-				}
-				else{
-					hydraDelegate->HydraButtonReleased(i, HYDRA_BUTTON_START);
-					hydraDelegate->HydraStartReleased(i);
-					//InputMapping
-					if (leftHand)
-					{
-						EmitKeyUpEventForKey(EKeysHydra::HydraLeftStart, 0, 0);
-						EmitKeyUpEventForKey(FGamepadKeyNames::MotionController_Left_FaceButton5, 0, 0);	//map start to button 5
-					}
-					else
-					{
-						EmitKeyUpEventForKey(EKeysHydra::HydraRightStart, 0, 0);
-						EmitKeyUpEventForKey(FGamepadKeyNames::MotionController_Right_FaceButton5, 0, 0);	//map start to button 5
-					}
-				}
-			}
-
-			//Joystick Click
-			if ((controller->buttons & SIXENSE_BUTTON_JOYSTICK) != (previous->buttons & SIXENSE_BUTTON_JOYSTICK))
-			{
-				if ((controller->buttons & SIXENSE_BUTTON_JOYSTICK) == SIXENSE_BUTTON_JOYSTICK)
-				{
-					hydraDelegate->HydraButtonPressed(i, HYDRA_BUTTON_JOYSTICK);
-					hydraDelegate->HydraJoystickPressed(i);
-					//InputMapping
-					if (leftHand)
-					{
-						EmitKeyDownEventForKey(EKeysHydra::HydraLeftJoystickClick, 0, 0);
-						EmitKeyDownEventForKey(FGamepadKeyNames::MotionController_Left_FaceButton6, 0, 0);	//map joystick click to button 6
-					}
-					else
-					{
-						EmitKeyDownEventForKey(EKeysHydra::HydraRightJoystickClick, 0, 0);
-						EmitKeyDownEventForKey(FGamepadKeyNames::MotionController_Right_FaceButton6, 0, 0);	//map joystick click to button 6
-					}
-				}
-				else{
-					hydraDelegate->HydraButtonReleased(i, HYDRA_BUTTON_JOYSTICK);
-					hydraDelegate->HydraJoystickReleased(i);
-					//InputMapping
-					if (leftHand)
-					{
-						EmitKeyUpEventForKey(EKeysHydra::HydraLeftJoystickClick, 0, 0);
-						EmitKeyUpEventForKey(FGamepadKeyNames::MotionController_Left_FaceButton6, 0, 0);	//map joystick click to button 6
-					}
-					else
-					{
-						EmitKeyUpEventForKey(EKeysHydra::HydraRightJoystickClick, 0, 0);
-						EmitKeyUpEventForKey(FGamepadKeyNames::MotionController_Right_FaceButton6, 0, 0);	//map joystick click to button 6
-					}
-				}
-			}
-
-			/** Movement */
-
-			//Joystick
-			if (controller->joystick.X != previous->joystick.X ||
-				controller->joystick.Y != previous->joystick.Y)
-			{
-				hydraDelegate->HydraJoystickMoved(i, controller->joystick);
-				//InputMapping
-				if (leftHand)
-				{
-					EmitAnalogInputEventForKey(EKeysHydra::HydraLeftJoystickX, controller->joystick.X, 0, 0);
-					EmitAnalogInputEventForKey(EKeysHydra::HydraLeftJoystickY, controller->joystick.Y, 0, 0);
-
-					EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Left_Thumbstick_X, controller->joystick.X, 0, 0);
-					EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Left_Thumbstick_Y, controller->joystick.Y, 0, 0);
-				}
-				else
-				{
-					EmitAnalogInputEventForKey(EKeysHydra::HydraRightJoystickX, controller->joystick.X, 0, 0);
-					EmitAnalogInputEventForKey(EKeysHydra::HydraRightJoystickY, controller->joystick.Y, 0, 0);
-
-					EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Right_Thumbstick_X, controller->joystick.X, 0, 0);
-					EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Right_Thumbstick_Y, controller->joystick.Y, 0, 0);
-				}
-			}
-
-			//Controller
-
-			if (!controller->is_docked){
-				FRotator rotation = FRotator(controller->rotation);
-
-				//If the controller isn't docked, it's moving
-				hydraDelegate->HydraControllerMoved(i,
-					controller->position, controller->velocity, controller->acceleration,
-					rotation, controller->angular_velocity);
-
-				//InputMapping
-				if (leftHand)
-				{
-					//2 meters = 1.0
-					EmitAnalogInputEventForKey(EKeysHydra::HydraLeftMotionX, MotionInputMappingConversion(controller->position.X), 0, 0);
-					EmitAnalogInputEventForKey(EKeysHydra::HydraLeftMotionY, MotionInputMappingConversion(controller->position.Y), 0, 0);
-					EmitAnalogInputEventForKey(EKeysHydra::HydraLeftMotionZ, MotionInputMappingConversion(controller->position.Z), 0, 0);
-
-					EmitAnalogInputEventForKey(EKeysHydra::HydraLeftRotationPitch, rotation.Pitch / 90.f, 0, 0);
-					EmitAnalogInputEventForKey(EKeysHydra::HydraLeftRotationYaw, rotation.Yaw / 180.f, 0, 0);
-					EmitAnalogInputEventForKey(EKeysHydra::HydraLeftRotationRoll, rotation.Roll / 180.f, 0, 0);
-				}
-				else
-				{
-					//2 meters = 1.0
-					EmitAnalogInputEventForKey(EKeysHydra::HydraRightMotionX, MotionInputMappingConversion(controller->position.X), 0, 0);
-					EmitAnalogInputEventForKey(EKeysHydra::HydraRightMotionY, MotionInputMappingConversion(controller->position.Y), 0, 0);
-					EmitAnalogInputEventForKey(EKeysHydra::HydraRightMotionZ, MotionInputMappingConversion(controller->position.Z), 0, 0);
-
-					EmitAnalogInputEventForKey(EKeysHydra::HydraRightRotationPitch, rotation.Pitch / 90.f, 0, 0);
-					EmitAnalogInputEventForKey(EKeysHydra::HydraRightRotationYaw, rotation.Yaw / 180.f, 0, 0);
-					EmitAnalogInputEventForKey(EKeysHydra::HydraRightRotationRoll, rotation.Roll / 180.f, 0, 0);
-				}
-			}
-		}//end enabled
-		else{
-			if (controller->enabled != previous->enabled)
-			{
-				DelegateCheckEnabledCount(&plugNotChecked);
-				hydraDelegate->HydraControllerDisabled(i);
+					Component->ControllerUndocked.Broadcast(Latest);
+				});
 			}
 		}
-	}//end controller for loop
+
+		//Buttons
+
+		//Trigger
+		if (Latest.Trigger != Previous.Trigger)
+		{
+			//Input mapping
+			if (leftHand)
+			{
+				EmitAnalogInputEventForKey(EKeysHydra::HydraLeftTrigger, Latest.Trigger, 0, 0);
+				EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Left_TriggerAxis, Latest.Trigger, 0, 0);
+			}
+			else
+			{
+				EmitAnalogInputEventForKey(EKeysHydra::HydraRightTrigger, Latest.Trigger, 0, 0);
+				EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Right_TriggerAxis, Latest.Trigger, 0, 0);
+			}
+
+			if (Latest.TriggerPressed != Previous.TriggerPressed)
+			{
+				BroadcastButtonChangeForController(HYDRA_BUTTON_TRIGGER, Latest, Latest.TriggerPressed);
+			}
+		}
+
+		//Bumper
+		if (Latest.BumperPressed != Previous.BumperPressed)
+		{
+			BroadcastButtonChangeForController(HYDRA_BUTTON_BUMPER, Latest, Latest.BumperPressed);
+		}
+
+		//B1
+		if (Latest.B1Pressed != Previous.B1Pressed)
+		{
+			BroadcastButtonChangeForController(HYDRA_BUTTON_B1, Latest, Latest.B1Pressed);
+		}
+
+		//B2
+		if (Latest.B2Pressed != Previous.B2Pressed)
+		{
+			BroadcastButtonChangeForController(HYDRA_BUTTON_B2, Latest, Latest.B2Pressed);
+		}
+
+		//B3
+		if (Latest.B3Pressed != Previous.B3Pressed)
+		{
+			BroadcastButtonChangeForController(HYDRA_BUTTON_B3, Latest, Latest.B3Pressed);
+		}
+
+		//B4
+		if (Latest.B4Pressed != Previous.B4Pressed)
+		{
+			BroadcastButtonChangeForController(HYDRA_BUTTON_B4, Latest, Latest.B4Pressed);
+		}
+
+		//Start
+		if (Latest.StartPressed != Previous.StartPressed)
+		{
+			BroadcastButtonChangeForController(HYDRA_BUTTON_START, Latest, Latest.StartPressed);
+		}
+
+		//Joystick Click
+		if (Latest.JoystickClicked != Previous.JoystickClicked)
+		{
+			BroadcastButtonChangeForController(HYDRA_BUTTON_JOYSTICK, Latest, Latest.JoystickClicked);
+		}
+
+		//Joystick movement
+		if (Latest.Joystick.X != Previous.Joystick.X ||
+			Latest.Joystick.Y != Previous.Joystick.Y)
+		{
+			if (leftHand)
+			{
+				EmitAnalogInputEventForKey(EKeysHydra::HydraLeftJoystickX, Latest.Joystick.X, 0, 0);
+				EmitAnalogInputEventForKey(EKeysHydra::HydraLeftJoystickY, Latest.Joystick.Y, 0, 0);
+
+				EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Left_Thumbstick_X, Latest.Joystick.X, 0, 0);
+				EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Left_Thumbstick_Y, Latest.Joystick.Y, 0, 0);
+			}
+			else
+			{
+				EmitAnalogInputEventForKey(EKeysHydra::HydraRightJoystickX, Latest.Joystick.X, 0, 0);
+				EmitAnalogInputEventForKey(EKeysHydra::HydraRightJoystickY, Latest.Joystick.Y, 0, 0);
+
+				EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Right_Thumbstick_X, Latest.Joystick.X, 0, 0);
+				EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Right_Thumbstick_Y, Latest.Joystick.Y, 0, 0);
+			}
+			pluginPointer->CallFunctionOnDelegates([&](UHydraControllerComponent* Component)
+			{
+				Component->JoystickMoved.Broadcast(Latest, Latest.Joystick);
+			});
+		}
+
+		//Controller movement
+		if (!Latest.Docked)
+		{
+			if (leftHand)
+			{
+				//2 meters = 1.0
+				EmitAnalogInputEventForKey(EKeysHydra::HydraLeftMotionX, MotionInputMappingConversion(Latest.Position.X), 0, 0);
+				EmitAnalogInputEventForKey(EKeysHydra::HydraLeftMotionY, MotionInputMappingConversion(Latest.Position.Y), 0, 0);
+				EmitAnalogInputEventForKey(EKeysHydra::HydraLeftMotionZ, MotionInputMappingConversion(Latest.Position.Z), 0, 0);
+
+				EmitAnalogInputEventForKey(EKeysHydra::HydraLeftRotationPitch, Latest.Orientation.Pitch / 90.f, 0, 0);
+				EmitAnalogInputEventForKey(EKeysHydra::HydraLeftRotationYaw, Latest.Orientation.Yaw / 180.f, 0, 0);
+				EmitAnalogInputEventForKey(EKeysHydra::HydraLeftRotationRoll, Latest.Orientation.Roll / 180.f, 0, 0);
+			}
+			else
+			{
+				//2 meters = 1.0
+				EmitAnalogInputEventForKey(EKeysHydra::HydraRightMotionX, MotionInputMappingConversion(Latest.Position.X), 0, 0);
+				EmitAnalogInputEventForKey(EKeysHydra::HydraRightMotionY, MotionInputMappingConversion(Latest.Position.Y), 0, 0);
+				EmitAnalogInputEventForKey(EKeysHydra::HydraRightMotionZ, MotionInputMappingConversion(Latest.Position.Z), 0, 0);
+
+				EmitAnalogInputEventForKey(EKeysHydra::HydraRightRotationPitch, Latest.Orientation.Pitch / 90.f, 0, 0);
+				EmitAnalogInputEventForKey(EKeysHydra::HydraRightRotationYaw, Latest.Orientation.Yaw / 180.f, 0, 0);
+				EmitAnalogInputEventForKey(EKeysHydra::HydraRightRotationRoll, Latest.Orientation.Roll / 180.f, 0, 0);
+			}
+			pluginPointer->CallFunctionOnDelegates([&](UHydraControllerComponent* Component)
+			{
+				Component->ControllerMoved.Broadcast(Latest, Latest.Position, Latest.Orientation);
+			});
+		}
+	}
 }
 
-//Implementing the module, required
-class FHydraPlugin : public IHydraPlugin
+//convenience wrapper for emitting input mapping and delegate function calls
+void FHydraController::BroadcastButtonChangeForController(EHydraControllerButton Button,
+	const FHydraControllerData& Latest, 
+	bool ButtonPressed)
 {
-	FHydraController* controllerReference = nullptr;
-	TArray<UHydraPluginComponent*> delegateComponents;
-	bool inputDeviceCreated = false;
-
-	virtual TSharedPtr< class IInputDevice > CreateInputDevice(const TSharedRef< FGenericApplicationMessageHandler >& InMessageHandler) override
+	if (Latest.HandPossession == HYDRA_HAND_LEFT)
 	{
-		controllerReference = new FHydraController(InMessageHandler);
-		// Add defered delegates
-		for (auto& actorComponent : delegateComponents) {
-			controllerReference->hydraDelegate->AddEventDelegate(actorComponent);
-			actorComponent->SetDataDelegate(controllerReference->hydraDelegate);
-		}
-		delegateComponents.Empty();
-		inputDeviceCreated = true;
-
-		return TSharedPtr< class IInputDevice >(controllerReference);
-	}
-
-	virtual HydraDataDelegate* DataDelegate() override
-	{
-		return controllerReference->hydraDelegate;
-	}
-
-	virtual void DeferedAddDelegate(UHydraPluginComponent* delegate) override
-	{
-		if (inputDeviceCreated) 
+		if (ButtonPressed)
 		{
-			controllerReference->hydraDelegate->AddEventDelegate(delegate);
-			delegate->SetDataDelegate(controllerReference->hydraDelegate);
+			EmitKeyDownEventForKey(LeftKeyMap[Button - 1].HydraKey, 0, 0);
+			EmitKeyDownEventForKey(LeftKeyMap[Button - 1].MotionControllerKey, 0, 0);
+			BroadcastButtonPressForController(Button, Latest);
 		}
-		else 
+		else
 		{
-			// defer until later
-			delegateComponents.Add(delegate);
+			EmitKeyUpEventForKey(LeftKeyMap[Button - 1].HydraKey, 0, 0);
+			EmitKeyUpEventForKey(LeftKeyMap[Button - 1].MotionControllerKey, 0, 0);
+			BroadcastButtonReleaseForController(Button, Latest);
 		}
 	}
+	else
+	{
+		if (ButtonPressed)
+		{
+			EmitKeyDownEventForKey(RightKeyMap[Button - 1].HydraKey, 0, 0);
+			EmitKeyDownEventForKey(RightKeyMap[Button - 1].MotionControllerKey, 0, 0);
+			BroadcastButtonPressForController(Button, Latest);
+		}
+		else
+		{
+			EmitKeyUpEventForKey(RightKeyMap[Button - 1].HydraKey, 0, 0);
+			EmitKeyUpEventForKey(RightKeyMap[Button - 1].MotionControllerKey, 0, 0);
+			BroadcastButtonReleaseForController(Button, Latest);
+		}
+	}
+}
 
-};
+void FHydraController::BroadcastButtonPressForController(EHydraControllerButton Button, const FHydraControllerData& Controller)
+{
+	pluginPointer->CallFunctionOnDelegates([&](UHydraControllerComponent* Component)
+	{
+		Component->ButtonPressed.Broadcast(Controller, Button);
+	});
+}
+
+void FHydraController::BroadcastButtonReleaseForController(EHydraControllerButton Button, const FHydraControllerData& Controller)
+{
+	pluginPointer->CallFunctionOnDelegates([&](UHydraControllerComponent* Component)
+	{
+		Component->ButtonReleased.Broadcast(Controller, Button);
+	});
+}
+
+#pragma endregion FHydraController
+
+#pragma region FHydraPlugin - Methods
+
+TSharedPtr< class IInputDevice > FHydraPlugin::CreateInputDevice(const TSharedRef< FGenericApplicationMessageHandler >& InMessageHandler)
+{
+	controllerReference = new FHydraController(InMessageHandler);
+	controllerReference->pluginPointer = this;
+	inputDeviceCreated = true;
+
+	return TSharedPtr< class IInputDevice >(controllerReference);
+}
+
+void FHydraPlugin::AddComponentDelegate(UHydraControllerComponent* DelegateComponent)
+{
+	//Only game component should receive callbacks
+	UWorld* ComponentWorld = DelegateComponent->GetOwner()->GetWorld();
+	if (ComponentWorld == nullptr)
+	{
+		return;
+	}
+	if (ComponentWorld->WorldType == EWorldType::Game ||
+		ComponentWorld->WorldType == EWorldType::GamePreview ||
+		ComponentWorld->WorldType == EWorldType::PIE)
+	{
+		ComponentDelegates.Add(DelegateComponent);
+	}
+}
+
+void FHydraPlugin::RemoveComponentDelegate(UHydraControllerComponent* DelegateComponent)
+{
+	//Only game component should receive callbacks
+	UWorld* ComponentWorld = DelegateComponent->GetOwner()->GetWorld();
+	if (ComponentWorld == nullptr)
+	{
+		return;
+	}
+	if (ComponentWorld->WorldType == EWorldType::Game ||
+		ComponentWorld->WorldType == EWorldType::GamePreview ||
+		ComponentWorld->WorldType == EWorldType::PIE)
+	{
+		ComponentDelegates.Remove(DelegateComponent);
+	}
+}
+
+void FHydraPlugin::SetCalibrationTransform(const FTransform& InCalibrationTransform)
+{
+	CalibrationTransform = InCalibrationTransform;
+}
+
+FTransform FHydraPlugin::GetCalibrationTransform()
+{
+	return CalibrationTransform;
+}
+
+bool FHydraPlugin::IsPluggedInAndEnabled()
+{
+	return controllerReference->collector->AllDataUE.isValidAndTracking();
+}
+
+bool FHydraPlugin::LeftHandData(FHydraControllerData& OutData)
+{
+	if (controllerReference->collector->LatestLeft != nullptr)
+	{
+		OutData.SetFromSixenseDataUE(*controllerReference->collector->LatestLeft);
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+bool FHydraPlugin::RightHandData(FHydraControllerData& OutData)
+{
+	if (controllerReference->collector->LatestRight != nullptr)
+	{
+		OutData.SetFromSixenseDataUE(*controllerReference->collector->LatestRight);
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+void FHydraPlugin::CallFunctionOnDelegates(TFunction< void(UHydraControllerComponent*)> InFunction)
+{
+	for (UHydraControllerComponent* ComponentDelegate : ComponentDelegates)
+	{
+		InFunction(ComponentDelegate);
+	}
+}
 
 //Second parameter needs to be called the same as the Module name or packaging will fail
 IMPLEMENT_MODULE(FHydraPlugin, HydraPlugin)	
+
+#pragma endregion FHydraPlugin - Methods
