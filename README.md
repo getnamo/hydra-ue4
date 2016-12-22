@@ -14,7 +14,7 @@ Since version 0.8, the plugin works through both Unreal Engine [Motion Controlle
  2.	Create new or choose project.
  3.	Browse to your project folder (typically found at Documents/Unreal Project/*{Your Project Root}*)
  4.	Copy *Plugins* folder into your Project root.
- 5.    Enable the plugin via Edit->Plugins. Scroll down to Project->Networking. Click Enabled.
+ 5.    Enable the plugin via Edit->Plugins. Scroll down to Project->Input Devices. Click Enabled.
  5.	Restart the Editor and open your project again. Plugin is now ready to use.
 
 ## Motion Controller Documentation ##
