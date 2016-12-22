@@ -3,7 +3,6 @@
 #include "IHydraPlugin.h"
 #include "IMotionController.h"
 
-
 #include "SlateBasics.h"
 #include "IPluginManager.h"
 #include "HydraComponent.h"
@@ -16,7 +15,7 @@
 #include <windows.h>
 
 #define LOCTEXT_NAMESPACE "HydraPlugin"
-#define PLUGIN_VERSION "0.9.0"
+#define PLUGIN_VERSION "0.9.1"
 #define HYDRA_HISTORY_MAX 5	//5 frame history for data
 DEFINE_LOG_CATEGORY_STATIC(HydraPluginLog, Log, All);
 
@@ -91,6 +90,7 @@ public:
 		converted.rotation = FRotator(converted.quat);																//convert once and re-use in blueprints
 		converted.joystick = FVector2D(data->joystick_x, data->joystick_y);
 		converted.trigger = data->trigger;
+		converted.trigger_pressed = (converted.trigger > 0.5f);
 		converted.buttons = data->buttons;
 		converted.sequence_number = data->sequence_number;
 		converted.firmware_revision = data->firmware_revision;
@@ -739,14 +739,28 @@ TSharedPtr< class IInputDevice > FHydraPlugin::CreateInputDevice(const TSharedRe
 	return TSharedPtr< class IInputDevice >(controllerReference);
 }
 
-void FHydraPlugin::AddComponentDelegate(UHydraPluginComponent* delegateComponent)
+void FHydraPlugin::AddComponentDelegate(UHydraPluginComponent* DelegateComponent)
 {
-	ComponentDelegates.Add(delegateComponent);
+	//Only game component should receive callbacks
+	UWorld* ComponentWorld = DelegateComponent->GetOwner()->GetWorld();
+	if (ComponentWorld->WorldType == EWorldType::Game ||
+		ComponentWorld->WorldType == EWorldType::GamePreview ||
+		ComponentWorld->WorldType == EWorldType::PIE)
+	{
+		ComponentDelegates.Add(DelegateComponent);
+	}
 }
 
-void FHydraPlugin::RemoveComponentDelegate(UHydraPluginComponent* delegateComponent)
+void FHydraPlugin::RemoveComponentDelegate(UHydraPluginComponent* DelegateComponent)
 {
-	ComponentDelegates.Remove(delegateComponent);
+	//Only game component should receive callbacks
+	UWorld* ComponentWorld = DelegateComponent->GetOwner()->GetWorld();
+	if (ComponentWorld->WorldType == EWorldType::Game ||
+		ComponentWorld->WorldType == EWorldType::GamePreview ||
+		ComponentWorld->WorldType == EWorldType::PIE)
+	{
+		ComponentDelegates.Remove(DelegateComponent);
+	}
 }
 
 void FHydraPlugin::SetCalibrationTransform(const FTransform& InCalibrationTransform)
