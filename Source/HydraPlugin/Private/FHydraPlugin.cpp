@@ -488,16 +488,11 @@ void FHydraController::HydraInputTick()
 	SixenseAllControllerDataUE& LatestSet = collector->AllDataUE;
 	SixenseAllControllerDataUE& PreviousSet = collector->HistoricalDataUE[1];
 
-	if (!LatestSet.isValidAndTracking())
-	{
-		return;
-	}
-
 	//Did our enabled count change?
 	if (LatestSet.enabledCount != PreviousSet.enabledCount)
 	{
 		//If we have a full enabled count we just plugged the hydra in
-		if (LatestSet.hasFullEnabledCount())
+		if (LatestSet.isValidAndTracking())
 		{
 			pluginPointer->CallFunctionOnDelegates([&](UHydraControllerComponent* Component)
 			{
@@ -511,6 +506,12 @@ void FHydraController::HydraInputTick()
 				Component->OnUnplugged.Broadcast();
 			});
 		}
+	}
+
+	//If we're not tracking that's it leave the loop early
+	if (!LatestSet.isValidAndTracking())
+	{
+		return;
 	}
 
 	for (int i = 0; i < MAX_CONTROLLERS_SUPPORTED; i++)
