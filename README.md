@@ -59,7 +59,7 @@ How about events? Now there are no more interfaces to deal with, instead you cli
 ####On Controller Moved
 
 E.g. draw a debug box for each hydra from a base offset scene component
-![IMG](http://i.imgur.com/wlpdujf.png)
+![IMG](http://i.imgur.com/2IMOcTR.png)
 
 ####Button Pressed/Released
 
