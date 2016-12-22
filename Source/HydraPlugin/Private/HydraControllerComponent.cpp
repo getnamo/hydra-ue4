@@ -1,16 +1,16 @@
 #include "HydraPluginPrivatePCH.h"
-#include "HydraComponent.h"
+#include "HydraControllerComponent.h"
 #include "IHydraPlugin.h"
 #include "Engine.h"
 
 
-UHydraPluginComponent::UHydraPluginComponent(const FObjectInitializer &init) : UActorComponent(init)
+UHydraControllerComponent::UHydraControllerComponent(const FObjectInitializer &init) : UActorComponent(init)
 {
 	bWantsInitializeComponent = true;
 	bAutoActivate = true;
 }
 
-void UHydraPluginComponent::InitializeComponent()
+void UHydraControllerComponent::InitializeComponent()
 {
 	Super::InitializeComponent();
 
@@ -18,7 +18,7 @@ void UHydraPluginComponent::InitializeComponent()
 	IHydraPlugin::Get().AddComponentDelegate(this);
 }
 
-void UHydraPluginComponent::UninitializeComponent()
+void UHydraControllerComponent::UninitializeComponent()
 {
 	//remove ourselves from the delegates
 	IHydraPlugin::Get().RemoveComponentDelegate(this);
@@ -27,13 +27,13 @@ void UHydraPluginComponent::UninitializeComponent()
 }
 
 //Utility Functions
-bool UHydraPluginComponent::IsAvailable()
+bool UHydraControllerComponent::IsAvailable()
 {
 	return ( IHydraPlugin::IsAvailable() && 
 			 IHydraPlugin::Get().IsPluggedInAndEnabled() );
 }
 
-bool UHydraPluginComponent::GetLatestFrameForHand(FHydraControllerData& OutControllerData, EHydraControllerHand hand /*= HYDRA_HAND_LEFT*/)
+bool UHydraControllerComponent::GetLatestFrameForHand(FHydraControllerData& OutControllerData, EHydraControllerHand hand /*= HYDRA_HAND_LEFT*/)
 {
 	switch (hand)
 	{
@@ -50,14 +50,14 @@ bool UHydraPluginComponent::GetLatestFrameForHand(FHydraControllerData& OutContr
 }
 
 //Calibration
-void UHydraPluginComponent::SetBaseOffset(FVector Offset)
+void UHydraControllerComponent::SetBaseOffset(FVector Offset)
 {
 	FTransform CalibrationTransform;
 	CalibrationTransform.SetLocation(Offset);
 	IHydraPlugin::Get().SetCalibrationTransform(CalibrationTransform);
 }
 
-void UHydraPluginComponent::Calibrate(FVector OffsetFromShouldMidPoint)
+void UHydraControllerComponent::Calibrate(FVector OffsetFromShouldMidPoint)
 {
 	FTransform CalibrationTransform;
 

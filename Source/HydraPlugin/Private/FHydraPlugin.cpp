@@ -5,7 +5,7 @@
 
 #include "SlateBasics.h"
 #include "IPluginManager.h"
-#include "HydraComponent.h"
+#include "HydraControllerComponent.h"
 #include "HydraUtility.h"
 
 #include <iostream>
@@ -15,7 +15,7 @@
 #include <windows.h>
 
 #define LOCTEXT_NAMESPACE "HydraPlugin"
-#define HYDRA_HISTORY_MAX 5	//5 frame history for data
+#define HYDRA_HISTORY_MAX 2				//frame history for data, shrunken to minimum 2 frame history for acceleration
 DEFINE_LOG_CATEGORY_STATIC(HydraPluginLog, Log, All);
 
 //Private API - This is where the magic happens
@@ -40,16 +40,16 @@ class FHydraPlugin : public IHydraPlugin
 {
 	FTransform CalibrationTransform;
 	class FHydraController* controllerReference = nullptr;
-	TArray<UHydraPluginComponent*> ComponentDelegates;
+	TArray<UHydraControllerComponent*> ComponentDelegates;
 	bool inputDeviceCreated = false;
 
 public:
 
 	virtual TSharedPtr< class IInputDevice > CreateInputDevice(const TSharedRef< FGenericApplicationMessageHandler >& InMessageHandler) override;
 
-	virtual void AddComponentDelegate(UHydraPluginComponent* delegateComponent) override;
+	virtual void AddComponentDelegate(UHydraControllerComponent* delegateComponent) override;
 
-	virtual void RemoveComponentDelegate(UHydraPluginComponent* delegateComponent) override;
+	virtual void RemoveComponentDelegate(UHydraControllerComponent* delegateComponent) override;
 
 	virtual void SetCalibrationTransform(const FTransform& InCalibrationTransform) override;
 
@@ -60,7 +60,7 @@ public:
 	virtual bool RightHandData(FHydraControllerData& OutData) override;
 
 	//Call this function on all the attached plugin component delegates
-	void CallFunctionOnDelegates(TFunction< void(UHydraPluginComponent*)> InFunction);
+	void CallFunctionOnDelegates(TFunction< void(UHydraControllerComponent*)> InFunction);
 };
 
 #pragma endregion FHydraPlugin - Declaration
@@ -499,14 +499,14 @@ void FHydraController::HydraInputTick()
 		//If we have a full enabled count we just plugged the hydra in
 		if (LatestSet.hasFullEnabledCount())
 		{
-			pluginPointer->CallFunctionOnDelegates([&](UHydraPluginComponent* Component)
+			pluginPointer->CallFunctionOnDelegates([&](UHydraControllerComponent* Component)
 			{
 				Component->OnPluggedIn.Broadcast();
 			});
 		}
 		else
 		{
-			pluginPointer->CallFunctionOnDelegates([&](UHydraPluginComponent* Component)
+			pluginPointer->CallFunctionOnDelegates([&](UHydraControllerComponent* Component)
 			{
 				Component->OnUnplugged.Broadcast();
 			});
@@ -535,14 +535,14 @@ void FHydraController::HydraInputTick()
 		{
 			if (Latest.Docked)
 			{
-				pluginPointer->CallFunctionOnDelegates([&](UHydraPluginComponent* Component)
+				pluginPointer->CallFunctionOnDelegates([&](UHydraControllerComponent* Component)
 				{
 					Component->ControllerDocked.Broadcast(Latest);
 				});
 			}
 			else
 			{
-				pluginPointer->CallFunctionOnDelegates([&](UHydraPluginComponent* Component)
+				pluginPointer->CallFunctionOnDelegates([&](UHydraControllerComponent* Component)
 				{
 					Component->ControllerUndocked.Broadcast(Latest);
 				});
@@ -634,7 +634,7 @@ void FHydraController::HydraInputTick()
 				EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Right_Thumbstick_X, Latest.Joystick.X, 0, 0);
 				EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Right_Thumbstick_Y, Latest.Joystick.Y, 0, 0);
 			}
-			pluginPointer->CallFunctionOnDelegates([&](UHydraPluginComponent* Component)
+			pluginPointer->CallFunctionOnDelegates([&](UHydraControllerComponent* Component)
 			{
 				Component->JoystickMoved.Broadcast(Latest, Latest.Joystick);
 			});
@@ -665,7 +665,7 @@ void FHydraController::HydraInputTick()
 				EmitAnalogInputEventForKey(EKeysHydra::HydraRightRotationYaw, Latest.Orientation.Yaw / 180.f, 0, 0);
 				EmitAnalogInputEventForKey(EKeysHydra::HydraRightRotationRoll, Latest.Orientation.Roll / 180.f, 0, 0);
 			}
-			pluginPointer->CallFunctionOnDelegates([&](UHydraPluginComponent* Component)
+			pluginPointer->CallFunctionOnDelegates([&](UHydraControllerComponent* Component)
 			{
 				Component->ControllerMoved.Broadcast(Latest, Latest.Position, Latest.Orientation);
 			});
@@ -712,7 +712,7 @@ void FHydraController::BroadcastButtonChangeForController(EHydraControllerButton
 
 void FHydraController::BroadcastButtonPressForController(EHydraControllerButton Button, const FHydraControllerData& Controller)
 {
-	pluginPointer->CallFunctionOnDelegates([&](UHydraPluginComponent* Component)
+	pluginPointer->CallFunctionOnDelegates([&](UHydraControllerComponent* Component)
 	{
 		Component->ButtonPressed.Broadcast(Controller, Button);
 	});
@@ -720,7 +720,7 @@ void FHydraController::BroadcastButtonPressForController(EHydraControllerButton 
 
 void FHydraController::BroadcastButtonReleaseForController(EHydraControllerButton Button, const FHydraControllerData& Controller)
 {
-	pluginPointer->CallFunctionOnDelegates([&](UHydraPluginComponent* Component)
+	pluginPointer->CallFunctionOnDelegates([&](UHydraControllerComponent* Component)
 	{
 		Component->ButtonReleased.Broadcast(Controller, Button);
 	});
@@ -739,7 +739,7 @@ TSharedPtr< class IInputDevice > FHydraPlugin::CreateInputDevice(const TSharedRe
 	return TSharedPtr< class IInputDevice >(controllerReference);
 }
 
-void FHydraPlugin::AddComponentDelegate(UHydraPluginComponent* DelegateComponent)
+void FHydraPlugin::AddComponentDelegate(UHydraControllerComponent* DelegateComponent)
 {
 	//Only game component should receive callbacks
 	UWorld* ComponentWorld = DelegateComponent->GetOwner()->GetWorld();
@@ -755,7 +755,7 @@ void FHydraPlugin::AddComponentDelegate(UHydraPluginComponent* DelegateComponent
 	}
 }
 
-void FHydraPlugin::RemoveComponentDelegate(UHydraPluginComponent* DelegateComponent)
+void FHydraPlugin::RemoveComponentDelegate(UHydraControllerComponent* DelegateComponent)
 {
 	//Only game component should receive callbacks
 	UWorld* ComponentWorld = DelegateComponent->GetOwner()->GetWorld();
@@ -812,9 +812,9 @@ bool FHydraPlugin::RightHandData(FHydraControllerData& OutData)
 	}
 }
 
-void FHydraPlugin::CallFunctionOnDelegates(TFunction< void(UHydraPluginComponent*)> InFunction)
+void FHydraPlugin::CallFunctionOnDelegates(TFunction< void(UHydraControllerComponent*)> InFunction)
 {
-	for (UHydraPluginComponent* ComponentDelegate : ComponentDelegates)
+	for (UHydraControllerComponent* ComponentDelegate : ComponentDelegates)
 	{
 		InFunction(ComponentDelegate);
 	}

@@ -2,7 +2,7 @@
 
 #include "HydraPluginPrivatePCH.h"
 #include "HydraControllerData.h"
-#include "HydraComponent.generated.h"
+#include "HydraControllerComponent.generated.h"
 
 //These macros cannot be multi-line or it will not compile
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FHydraPluggedInSignature);
@@ -14,8 +14,12 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHydraButtonReleasedSignature, cons
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHydraJoystickMovedSignature, const FHydraControllerData&, Controller, FVector2D, movement);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FHydraControllerMovedSignature, const FHydraControllerData&, Controller, FVector, Position, FRotator, Orientation);
 
+
+/**
+	Optional Hydra specific component which receives hydra specific events and can query specific data.
+*/
 UCLASS(ClassGroup="Input Controller", meta=(BlueprintSpawnableComponent))
-class HYDRAPLUGIN_API UHydraPluginComponent : public UActorComponent
+class HYDRAPLUGIN_API UHydraControllerComponent : public UActorComponent
 {
 	GENERATED_UCLASS_BODY()
 public:

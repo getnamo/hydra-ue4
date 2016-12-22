@@ -3,7 +3,7 @@
 #pragma once
 
 #include "ModuleManager.h"
-#include "HydraComponent.h"
+#include "HydraControllerComponent.h"
 #include "IInputDeviceModule.h"
 
 /**
@@ -39,8 +39,8 @@ public:
 	virtual FTransform GetCalibrationTransform() { return FTransform(); };
 	virtual bool IsPluggedInAndEnabled() { return false; };
 
-	virtual void AddComponentDelegate(UHydraPluginComponent* delegateComponent) {};
-	virtual void RemoveComponentDelegate(UHydraPluginComponent* delegateComponent) {};
+	virtual void AddComponentDelegate(UHydraControllerComponent* delegateComponent) {};
+	virtual void RemoveComponentDelegate(UHydraControllerComponent* delegateComponent) {};
 
 	virtual bool LeftHandData(FHydraControllerData& OutData) { return false; }
 	virtual bool RightHandData(FHydraControllerData& OutData) { return false; }
