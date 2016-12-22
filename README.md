@@ -1,8 +1,8 @@
 ## Overview ##
 
-An Unofficial Razer Hydra Plugin for the Unreal Engine 4. 
+An Unofficial [Razer Hydra Plugin](https://en.wikipedia.org/wiki/Razer_Hydra) for the [Unreal Engine 4](https://www.unrealengine.com/). 
 
-Since version 0.8, the plugin works through both Unreal Engine Motion Controller and Input Mapping abstraction as well as through a convenience component for hydra specific events and functions.
+Since version 0.8, the plugin works through both Unreal Engine [Motion Controller](https://docs.unrealengine.com/latest/INT/Platforms/VR/MotionController/) and [Input Mapping](https://docs.unrealengine.com/latest/INT/Gameplay/Input/) abstraction as well as through a convenience component for hydra specific events and functions.
 
 [Main discussion thread](https://forums.unrealengine.com/showthread.php?3505-Razer-Hydra-Plugin)
 
