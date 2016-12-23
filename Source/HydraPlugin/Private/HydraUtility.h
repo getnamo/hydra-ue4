@@ -11,7 +11,7 @@ public:
 	double unixTimeNow()
 	{
 		FDateTime timeUtc = FDateTime::UtcNow();
-		return timeUtc.ToUnixTimestamp() * 10000 + timeUtc.GetMillisecond();
+		return timeUtc.ToUnixTimestamp() * 1000 + timeUtc.GetMillisecond();
 	}
 
 	void tick()
@@ -23,7 +23,7 @@ public:
 	float tock()
 	{
 		TockTime = unixTimeNow();
-		return (TockTime - TickTime) / 1000.f;
+		return float(TockTime - TickTime) / 1000.f;
 	}
 };
 

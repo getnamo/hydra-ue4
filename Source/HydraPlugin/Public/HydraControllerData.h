@@ -56,21 +56,17 @@ struct HYDRAPLUGIN_API FHydraControllerData
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hydra Controller Data")
 	FVector RawPosition;
 
+	/** Derived Velocity */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hydra Controller Data")
 	FVector Velocity;
 
+	/** Derived Acceleration */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hydra Controller Data")
 	FVector Acceleration;
 
+	/** Derived AngularVelocity in FRotator(deg)/S */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hydra Controller Data")
 	FRotator AngularVelocity;
-
-	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hydra Controller Data")
-	int32 ControllerId;
-
-
-
-
 
 	void SetFromSixenseDataUE(const SixenseControllerDataUE& data);
 };

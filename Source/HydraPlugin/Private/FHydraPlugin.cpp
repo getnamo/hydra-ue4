@@ -15,7 +15,7 @@
 #include <windows.h>
 
 #define LOCTEXT_NAMESPACE "HydraPlugin"
-#define HYDRA_HISTORY_MAX 2				//frame history for data, shrunken to minimum 2 frame history for acceleration
+#define HYDRA_HISTORY_MAX 3				//frame history for data, shrunken to minimum 3 frame history for acceleration
 DEFINE_LOG_CATEGORY_STATIC(HydraPluginLog, Log, All);
 
 //Private API - This is where the magic happens
@@ -71,12 +71,16 @@ public:
 class DataCollector
 {
 public:
+	HydraUtilityTimer DeltaTimer;
+
 	DataCollector() :
 		LatestLeft(nullptr),
 		LatestRight(nullptr)
 	{
-
+		DeltaTimer.tick();
 	}
+
+	
 
 	SixenseControllerDataUE ConvertData(sixenseControllerData* data, FVector offset = FVector(0,0,0))
 	{
@@ -129,6 +133,19 @@ public:
 		}
 	}
 
+	void UpdateDerivedValues(float DeltaTime)
+	{
+		for (int i = 0; i < MAX_CONTROLLERS_SUPPORTED; i++)
+		{
+			SixenseControllerDataUE& Current = AllDataUE.controllers[i];
+			SixenseControllerDataUE& Last = HistoricalDataUE[1].controllers[i];
+
+			Current.velocity = (Current.position - Last.position) / DeltaTime;
+			Current.acceleration = (Current.velocity - Last.velocity) / DeltaTime;
+			Current.angular_velocity = (Current.rotation - Last.rotation) * (1/DeltaTime);
+		}
+	}
+
 	void GetLatestData(const FVector& Offset)
 	{
 		int success = HydraGetAllNewestData(&AllSixenseData);
@@ -142,6 +159,9 @@ public:
 			return;
 		}
 
+		float DeltaTime = DeltaTimer.tock();
+		DeltaTimer.tick();
+
 		ConvertAllData(Offset);
 
 		//Set all historical data
@@ -153,8 +173,9 @@ public:
 		//latest
 		HistoricalDataUE[0] = AllDataUE;
 
-		//left/right pointers
-
+		//update velocities/acceleration
+		UpdateDerivedValues(DeltaTime);
+		
 	}
 
 	sixenseAllControllerData AllSixenseData;
