@@ -25,7 +25,7 @@ Please refer to the [Motion Controller Component Setup unreal documentation](htt
 
 Where visible static meshes are parented to the motion controllers which are in turn parented to a chosen offset, forward by 40cm from the camera in this particular example.
 
-###Input Mapping
+### Input Mapping
 
 You can use either the Motion Controller input mapping (IM) events
 
@@ -35,7 +35,7 @@ or hydra specific ones
 
 ![IMG](http://i.imgur.com/4Y2QyLh.png)
 
-###Hydra Tracking Notes
+### Hydra Tracking Notes
 
 No hydra specific component is required, tracking is handled internally and passed to the agnostic motion controller components and the input mapping system. Tracking should defer to other motion controllers if unplugged or docked.
 
@@ -53,29 +53,29 @@ If you want to calibrate or do complex hydra specific things, just add a hydra c
 
 Component are multicast and their events are as well so place them *anywhere* in multiples if you want to. They are also where you would poll for latest data for gesture recognition/etc.
 
-###Events
+### Events
 How about events? Now there are no more interfaces to deal with, instead you click on your hydra plugin component and click the green + to add the event from the details pane. This should feel familiar as these are the same blueprint assignable multicast delegates that PrimitiveComponents use for collision checks (e.g. OnBeginOverlap)
 
-####On Controller Moved
+#### On Controller Moved
 
 E.g. draw a debug box for each hydra from a base offset scene component
 ![IMG](http://i.imgur.com/2IMOcTR.png)
 
-####Button Pressed/Released
+#### Button Pressed/Released
 
 e.g. verbose log of button presses/releases. Notice that you can break additional information from the controller data structure.
 
 ![IMG](http://i.imgur.com/g9OUtM9.png)
 
 
-####Joystick Moved
+#### Joystick Moved
 
 e.g. a verbose log of joystick movement
 
 
 ![IMG](http://i.imgur.com/eDDlKqZ.png)
 
-####Hotplugging Events
+#### Hotplugging Events
 
 Called when you plug in or unplug the controller from the system usb.
 ![IMG](http://i.imgur.com/jTfeerB.png)
@@ -117,7 +117,7 @@ Also you search your log file and find
 
 **Fix:** This error means the sixense dll file is missing.
 
-## Credit and License##
+## Credit and License
 Plugin made by Getnamo. Point all questions to the main discussion thread.
 
 The Sixense SDK is licensed under [Sixense EULA](http://sixense.com/eula).
