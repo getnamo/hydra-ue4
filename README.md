@@ -122,5 +122,4 @@ Plugin made by Getnamo. Point all questions to the main discussion thread.
 
 The Sixense SDK is licensed under [Sixense EULA](http://sixense.com/eula).
 
-<br />
-Anything not covered by Sixense EULA and [Unreal Engine EULA](https://www.unrealengine.com/eula) in <span property="dct:title">Hydra UE4 Plugin</span> provided under [MIT license](https://en.wikipedia.org/wiki/MIT_License). Do anything you want just retain the notice.
+Anything not covered by Sixense EULA and [Unreal Engine EULA](https://www.unrealengine.com/eula) in Hydra UE4 Plugin provided under [MIT license](https://en.wikipedia.org/wiki/MIT_License). Do anything you want just retain the notice.
