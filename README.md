@@ -1,4 +1,4 @@
-## Overview ##
+## Overview
 
 An Unofficial [Razer Hydra](https://en.wikipedia.org/wiki/Razer_Hydra) plugin for the [Unreal Engine 4](https://www.unrealengine.com/). 
 
@@ -8,7 +8,7 @@ Since version 0.8, the plugin works through both Unreal Engine [Motion Controlle
 
 [Unreal Engine Wiki](https://wiki.unrealengine.com/Unofficial_Hydra_Plugin)
 
-## Quick Install & Setup ##
+## Quick Install & Setup
 
  1.	[Download Latest Release](https://github.com/getnamo/hydra-ue4/releases)
  2.	Create new or choose project.
@@ -17,7 +17,7 @@ Since version 0.8, the plugin works through both Unreal Engine [Motion Controlle
  5.    Enable the plugin via Edit->Plugins. Scroll down to Project->Input Devices. Click Enabled.
  5.	Restart the Editor and open your project again. Plugin is now ready to use.
 
-## Motion Controller Documentation ##
+## Motion Controller Documentation
 
 Please refer to the [Motion Controller Component Setup unreal documentation](https://docs.unrealengine.com/latest/INT/Platforms/VR/MotionController/index.html) as this setup is hardware agnostic. Since 0.9 a basic motion controller setup should look like this:
 
@@ -45,7 +45,7 @@ For input mapping purposes
 Hydra start == Face Button 5
 Hydra Joystick Click == Face Button 6
 
-## Hydra Custom Functions and Events##
+## Hydra Custom Functions and Events
 
 ![IMG](http://i.imgur.com/wlpdujf.png)
 
@@ -91,11 +91,11 @@ Calibrate recalibrates the origin as coming from the centroid of your two hydras
 
 If you want to do your own calibration, just come up with a good position offset and set it here, all values onward will maintain this calibration, even between PIE sessions.
 
-## Shipping ##
+## Shipping
 
 When you're ready to ship, just package the game it should all work out of the box.
 
-### Shipping Troubleshoot ###
+### Shipping Troubleshoot
 
 You run your packaged project and you get the following errors
 
