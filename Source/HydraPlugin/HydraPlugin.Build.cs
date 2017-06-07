@@ -21,8 +21,8 @@ namespace UnrealBuildTool.Rules
             get { return Path.GetFullPath(Path.Combine(ModulePath, "../../Binaries/")); }
         }
 
-		public HydraPlugin(TargetInfo Target)
-		{
+		public HydraPlugin(ReadOnlyTargetRules Target) : base(Target)
+        {
 			PublicIncludePaths.AddRange(
 				new string[] {
                     "HydraPlugin/Public",
@@ -71,7 +71,7 @@ namespace UnrealBuildTool.Rules
 
 		}
 
-        public bool LoadHydraLib(TargetInfo Target)
+        public bool LoadHydraLib(ReadOnlyTargetRules Target)
         {
             bool isLibrarySupported = false;
 

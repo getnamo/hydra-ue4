@@ -446,7 +446,8 @@ public:
 	}
 
 	//Hydra only supports one player so ControllerIndex is ignored.
-	virtual bool GetControllerOrientationAndPosition(const int32 ControllerIndex, const EControllerHand DeviceHand, FRotator& OutOrientation, FVector& OutPosition) const
+
+	virtual bool GetControllerOrientationAndPosition(const int32 ControllerIndex, const EControllerHand DeviceHand, FRotator& OutOrientation, FVector& OutPosition, float WorldToMetersScale) const
 	{
 		bool RetVal = false;
 		
