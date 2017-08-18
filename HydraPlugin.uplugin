@@ -7,7 +7,8 @@
 	"CreatedByURL" : "http://getnamo.com",
 	"DocsURL" : "https://github.com/getnamo/hydra-ue4",
 	"Description" : "Unofficial plugin for the Razer Hydra Motion Controller",
-	"Category" : "Input Devices",
+  "Category": "Input Devices",
+  "EnabledByDefault": true,
   "Modules" :
 	[
     {
