@@ -8,11 +8,38 @@
 #include "HydraControllerComponent.h"
 #include "HydraUtility.h"
 
+#include "PreWindowsApi.h"
+#include "AllowWindowsPlatformTypes.h"
+#include "AllowWindowsPlatformAtomics.h"
+
+#pragma warning(push)
+#pragma warning(disable: 4191)
+#pragma warning(disable: 4996)
+
+#ifndef DeleteFile
+#define DeleteFile DeleteFileW
+#endif
+#ifndef MoveFile
+#define MoveFile MoveFileW
+#endif
+
+#ifndef LoadString
+#define LoadString LoadStringW
+#endif
+
+#ifndef GetMessage
+#define GetMessage GetMessageW
+#endif
+
 #include <iostream>
 #include <stdexcept>
 #include <vector>
 #include <sixense.h>
 #include <windows.h>
+
+#include "HideWindowsPlatformAtomics.h"
+#include "HideWindowsPlatformTypes.h"
+#include "PostWindowsApi.h"
 
 #define LOCTEXT_NAMESPACE "HydraPlugin"
 #define HYDRA_HISTORY_MAX 3				//frame history for data, shrunken to minimum 3 frame history for acceleration
@@ -219,6 +246,11 @@ public:
 
 	TArray<FHydraKeyMap> LeftKeyMap;
 	TArray<FHydraKeyMap> RightKeyMap;
+
+	virtual FName IMotionController::GetMotionControllerDeviceTypeName(void) const override
+	{
+		return TEXT("Razer Hydra");
+	}
 	
 	void AddInputMappingKeys()
 	{
