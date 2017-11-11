@@ -4,6 +4,7 @@
 #include "IMotionController.h"
 
 #include "SlateBasics.h"
+#include "Runtime/InputCore/Classes/InputCoreTypes.h"
 #include "IPluginManager.h"
 #include "HydraControllerComponent.h"
 #include "HydraUtility.h"

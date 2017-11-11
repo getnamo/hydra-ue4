@@ -39,14 +39,15 @@ namespace UnrealBuildTool.Rules
 				new string[]
 				{
 					"Core",
-					"CoreUObject",
+                    "CoreUObject",
                     "Engine",
+                    "HeadMountedDisplay",
                     "InputCore",
                     "InputDevice",
-                    "HeadMountedDisplay",
+                    "ApplicationCore",
                     "Projects",
                     "Slate",
-                    "SlateCore"
+                    "SlateCore",
 					// ... add other public dependencies that you statically link with here ...
 				}
 				);
