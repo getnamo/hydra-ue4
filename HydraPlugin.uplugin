@@ -1,21 +1,21 @@
 {
-  "FileVersion" : 3,
+	"FileVersion" : 3,
 	"FriendlyName" : "Razer Hydra Plugin",
 	"Version" : 1,
-	"VersionName" : "1.0.1",
+	"VersionName" : "1.1.0",
 	"CreatedBy" : "Getnamo",
 	"CreatedByURL" : "http://getnamo.com",
 	"DocsURL" : "https://github.com/getnamo/hydra-ue4",
 	"Description" : "Unofficial plugin for the Razer Hydra Motion Controller",
-  "Category": "Input Devices",
-  "EnabledByDefault": true,
-  "Modules" :
+	"Category": "Input Devices",
+	"EnabledByDefault": true,
+	"Modules" :
 	[
-    {
-	    "Name" : "HydraPlugin",
-	    "Type" : "Runtime",
-      "LoadingPhase": "PostConfigInit",
-	    "WhitelistPlatforms" : [ "Win64", "Win32" ]
-    }
+	{
+		"Name" : "HydraPlugin",
+		"Type" : "Runtime",
+		"LoadingPhase": "PostConfigInit",
+		"WhitelistPlatforms" : [ "Win64", "Win32" ]
+	}
 	]
 }

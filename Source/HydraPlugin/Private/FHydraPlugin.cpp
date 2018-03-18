@@ -5,6 +5,7 @@
 
 #include "SlateBasics.h"
 #include "Runtime/InputCore/Classes/InputCoreTypes.h"
+#include "Runtime/HeadMountedDisplay/Public/XRMotionControllerBase.h"
 #include "IPluginManager.h"
 #include "HydraControllerComponent.h"
 #include "HydraUtility.h"
@@ -247,11 +248,6 @@ public:
 
 	TArray<FHydraKeyMap> LeftKeyMap;
 	TArray<FHydraKeyMap> RightKeyMap;
-
-	virtual FName IMotionController::GetMotionControllerDeviceTypeName(void) const override
-	{
-		return TEXT("Razer Hydra");
-	}
 	
 	void AddInputMappingKeys()
 	{
@@ -405,9 +401,7 @@ public:
 		}
 
 		//Required calls at init
-		IModularFeatures::Get().RegisterModularFeature(GetModularFeatureName(), this);
-
-		
+		IModularFeatures::Get().RegisterModularFeature(GetModularFeatureName(), this);		
 	}
 
 #undef LOCTEXT_NAMESPACE
@@ -439,7 +433,30 @@ public:
 	}
 
 
-	virtual ETrackingStatus GetControllerTrackingStatus(const int32 ControllerIndex, const EControllerHand DeviceHand) const
+	//IMotionController section
+	
+	virtual FName IMotionController::GetMotionControllerDeviceTypeName() const override
+	{
+		return TEXT("Razer Hydra");
+	}
+
+	/**
+	* Called to request the motion sources that this IMotionController provides
+	*
+	* @param Sources	A motion source enumerator object that IMotionControllers can add source names to
+	*/
+	virtual void EnumerateSources(TArray<FMotionControllerSource>& SourcesOut) const
+	{
+		SourcesOut.Add(FMotionControllerSource(FXRMotionControllerBase::LeftHandSourceId));
+		SourcesOut.Add(FMotionControllerSource(FXRMotionControllerBase::RightHandSourceId));
+	}
+
+	/**
+	* Returns the tracking status (e.g. not tracked, intertial-only, fully tracked) of the specified controller
+	*
+	* @return	Tracking status of the specified controller, or ETrackingStatus::NotTracked if the device is not found
+	*/
+	virtual ETrackingStatus GetControllerTrackingStatus(const int32 ControllerIndex, const FName MotionSource) const
 	{
 		//Check if we're plugged in
 		if (!pluginPointer->IsPluggedInAndEnabled())
@@ -449,11 +466,11 @@ public:
 
 		//Get data to see if we're tracked
 		FHydraControllerData Controller;
-		if (DeviceHand == EControllerHand::Left)
+		if (MotionSource == FXRMotionControllerBase::LeftHandSourceId)
 		{
 			pluginPointer->LeftHandData(Controller);
 		}
-		else if (DeviceHand == EControllerHand::Right)
+		else if (MotionSource == FXRMotionControllerBase::RightHandSourceId)
 		{
 			pluginPointer->RightHandData(Controller);
 		}
@@ -480,16 +497,27 @@ public:
 
 	//Hydra only supports one player so ControllerIndex is ignored.
 
-	virtual bool GetControllerOrientationAndPosition(const int32 ControllerIndex, const EControllerHand DeviceHand, FRotator& OutOrientation, FVector& OutPosition, float WorldToMetersScale) const
+	/**
+	* Returns the calibration-space orientation of the requested controller's hand.
+	*
+	* @param ControllerIndex	The Unreal controller (player) index of the controller set
+	* @param MotionSource		Which source, within the motion controller to get the orientation and position for
+	* @param OutOrientation	(out) If tracked, the orientation (in calibrated-space) of the controller in the specified hand
+	* @param OutPosition		(out) If tracked, the position (in calibrated-space) of the controller in the specified hand
+	* @param WorldToMetersScale The world scaling factor.
+	*
+	* @return					True if the device requested is valid and tracked, false otherwise
+	*/
+	virtual bool GetControllerOrientationAndPosition(const int32 ControllerIndex, const FName MotionSource, FRotator& OutOrientation, FVector& OutPosition, float WorldToMetersScale) const
 	{
 		bool RetVal = false;
 		
 		FHydraControllerData Controller;
-		if (DeviceHand == EControllerHand::Left)
+		if (MotionSource == FXRMotionControllerBase::LeftHandSourceId)
 		{
 			RetVal = pluginPointer->LeftHandData(Controller);
 		}
-		else if (DeviceHand == EControllerHand::Right)
+		else if (MotionSource == FXRMotionControllerBase::RightHandSourceId)
 		{
 			RetVal = pluginPointer->RightHandData(Controller);
 		}
@@ -504,6 +532,23 @@ public:
 
 		return RetVal;
 	}
+
+	/**
+	* Returns a custom names parameter value
+	*
+	* @param MotionSource		The name of the motion source we want parameters for
+	* @param ParameterName		The specific value we are looking for
+	* @param bOutValueFound	(out) Whether the parameter could be found
+	*
+	* @return			The value of the parameter
+	*/
+	virtual float GetCustomParameterValue(const FName MotionSource, FName ParameterName, bool& bOutValueFound) const
+	{
+		//we don't support custom parameters for now
+		return 0.f;
+	}
+
+	//End IMotionController
 
 	virtual bool Exec(UWorld* InWorld, const TCHAR* Cmd, FOutputDevice& Ar) override
 	{
