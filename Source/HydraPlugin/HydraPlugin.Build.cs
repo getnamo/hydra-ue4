@@ -25,13 +25,13 @@ namespace UnrealBuildTool.Rules
         {
 			PublicIncludePaths.AddRange(
 				new string[] {
-                    "HydraPlugin/Public",
+					Path.Combine(ModuleDirectory, "Public"),
 				}
 				);
 
 			PrivateIncludePaths.AddRange(
 				new string[] {
-					"HydraPlugin/Private",
+					Path.Combine(ModuleDirectory, "Private"),
 				}
 				);
 
