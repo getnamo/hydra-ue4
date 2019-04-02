@@ -23,6 +23,8 @@ namespace UnrealBuildTool.Rules
 
 		public HydraPlugin(ReadOnlyTargetRules Target) : base(Target)
         {
+			PrivatePCHHeaderFile = "Private/HydraPluginPrivatePCH.h";
+
 			PublicIncludePaths.AddRange(
 				new string[] {
 					Path.Combine(ModuleDirectory, "Public"),
@@ -38,12 +40,8 @@ namespace UnrealBuildTool.Rules
 			PublicDependencyModuleNames.AddRange(
 				new string[]
 				{
-					"Core",
-                    "CoreUObject",
-                    "Engine",
-                    "HeadMountedDisplay",
-                    "InputCore",
-                    "InputDevice",
+					"InputDevice",
+					"HeadMountedDisplay",   
                     "ApplicationCore",
                     "Projects",
                     "Slate",
@@ -55,6 +53,10 @@ namespace UnrealBuildTool.Rules
 			PrivateDependencyModuleNames.AddRange(
 				new string[]
 				{
+					"Core",
+					"CoreUObject",
+					"Engine",
+					"InputCore",
 					// ... add private dependencies that you statically link with here ...
 				}
 				);
@@ -90,12 +92,12 @@ namespace UnrealBuildTool.Rules
                 if (Target.Platform == UnrealTargetPlatform.Win64)
                 {
                     PublicDelayLoadDLLs.Add("sixense_x64.dll");
-                    RuntimeDependencies.Add(new RuntimeDependency(Path.Combine(BinariesPath, "Win64", "sixense_x64.dll")));
+                    RuntimeDependencies.Add(Path.Combine(BinariesPath, "Win64", "sixense_x64.dll"));
                 }
                 else
                 {
                     PublicDelayLoadDLLs.Add("sixense.dll");
-                    RuntimeDependencies.Add(new RuntimeDependency(Path.Combine(BinariesPath, "Win32", "sixense.dll")));
+                    RuntimeDependencies.Add(Path.Combine(BinariesPath, "Win32", "sixense.dll"));
                 }
             }
 

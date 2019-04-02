@@ -1,7 +1,6 @@
 #include "HydraPluginPrivatePCH.h"
 
 #include "IHydraPlugin.h"
-#include "IMotionController.h"
 
 #include "SlateBasics.h"
 #include "Runtime/InputCore/Classes/InputCoreTypes.h"
@@ -219,7 +218,7 @@ public:
 
 #pragma region FHydraController
 
-class FHydraPlugin;
+//class FHydraPlugin;
 
 struct FHydraKeyMap 
 {
@@ -233,7 +232,7 @@ struct FHydraKeyMap
 	}
 };
 
-class FHydraController : public IInputDevice, public IMotionController
+class FHydraController : public IInputDevice, public FXRMotionControllerBase
 {	
 
 public:
@@ -332,7 +331,7 @@ public:
 
 	//Init and Runtime
 	FHydraController(const TSharedRef< FGenericApplicationMessageHandler >& InMessageHandler)
-		: MessageHandler(InMessageHandler), pluginPointer(nullptr)
+		: pluginPointer(nullptr), MessageHandler(InMessageHandler)
 	{
 		UE_LOG(HydraPluginLog, Log, TEXT("Attempting to startup Hydra Module"));
 
@@ -390,10 +389,10 @@ public:
 
 		if (collector->AllDataUE.available)
 		{
-			UE_LOG(HydraPluginLog, Log, TEXT("Hydra Available."));
-
 			//Attach all EKeys
 			AddInputMappingKeys();
+
+			UE_LOG(HydraPluginLog, Log, TEXT("Hydra Available as %s"), *GetModularFeatureName().ToString());
 		}
 		else
 		{
@@ -417,6 +416,8 @@ public:
 		{
 			UE_LOG(HydraPluginLog, Log, TEXT("Hydra Clean shutdown."));
 		}
+
+		IModularFeatures::Get().UnregisterModularFeature(GetModularFeatureName(), this);
 
 		delete collector;
 	}
@@ -531,6 +532,42 @@ public:
 		OutOrientation = Controller.Orientation;
 
 		return RetVal;
+	}
+
+	//Compatibility to old call versions
+	virtual bool GetControllerOrientationAndPosition(const int32 ControllerIndex, const EControllerHand DeviceHand, FRotator& OutOrientation, FVector& OutPosition, float WorldToMetersScale) const
+	{
+		bool RetVal = false;
+		FName DeviceHandName = TEXT("AnyHand");
+		switch (DeviceHand)
+		{
+		case EControllerHand::Left:
+			DeviceHandName = LeftHandSourceId;
+			break;
+		case EControllerHand::Right:
+			DeviceHandName = RightHandSourceId;
+			break;
+		default:
+			break;
+		}
+		return GetControllerOrientationAndPosition(ControllerIndex, LeftHandSourceId, OutOrientation, OutPosition, WorldToMetersScale);
+	}
+
+	virtual ETrackingStatus GetControllerTrackingStatus(const int32 ControllerIndex, const EControllerHand DeviceHand) const
+	{
+		FName DeviceHandName = TEXT("AnyHand");
+		switch (DeviceHand)
+		{
+		case EControllerHand::Left:
+			DeviceHandName = LeftHandSourceId;
+			break;
+		case EControllerHand::Right:
+			DeviceHandName = RightHandSourceId;
+			break;
+		default:
+			break;
+		}
+		return GetControllerTrackingStatus(ControllerIndex, DeviceHandName);
 	}
 
 	/**
