@@ -12,3 +12,4 @@ Intermediate/*
 Binaries/Win64/UE4Editor-HydraPlugin.dll
 Binaries/Win64/UE4Editor.modules
 Binaries/Win64/UE4-HydraPlugin.lib
+*.dll
