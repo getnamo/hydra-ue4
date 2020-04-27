@@ -23,8 +23,6 @@ namespace UnrealBuildTool.Rules
 
 		public HydraPlugin(ReadOnlyTargetRules Target) : base(Target)
         {
-			PrivatePCHHeaderFile = "Private/HydraPluginPrivatePCH.h";
-
 			PublicIncludePaths.AddRange(
 				new string[] {
 					Path.Combine(ModuleDirectory, "Public"),

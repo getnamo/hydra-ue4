@@ -1,17 +1,17 @@
-#include "HydraPluginPrivatePCH.h"
+
 
 #include "IHydraPlugin.h"
 
 #include "SlateBasics.h"
 #include "Runtime/InputCore/Classes/InputCoreTypes.h"
 #include "Runtime/HeadMountedDisplay/Public/XRMotionControllerBase.h"
-#include "IPluginManager.h"
+#include "Interfaces/IPluginManager.h"
 #include "HydraControllerComponent.h"
 #include "HydraUtility.h"
 
-#include "PreWindowsApi.h"
-#include "AllowWindowsPlatformTypes.h"
-#include "AllowWindowsPlatformAtomics.h"
+#include "Windows/PreWindowsApi.h"
+#include "Windows/AllowWindowsPlatformTypes.h"
+#include "Windows/AllowWindowsPlatformAtomics.h"
 
 #pragma warning(push)
 #pragma warning(disable: 4191)
@@ -38,9 +38,9 @@
 #include <sixense.h>
 #include <windows.h>
 
-#include "HideWindowsPlatformAtomics.h"
-#include "HideWindowsPlatformTypes.h"
-#include "PostWindowsApi.h"
+#include "Windows/HideWindowsPlatformAtomics.h"
+#include "Windows/HideWindowsPlatformTypes.h"
+#include "Windows/PostWindowsApi.h"
 
 #define LOCTEXT_NAMESPACE "HydraPlugin"
 #define HYDRA_HISTORY_MAX 3				//frame history for data, shrunken to minimum 3 frame history for acceleration

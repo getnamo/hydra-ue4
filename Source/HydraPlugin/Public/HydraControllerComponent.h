@@ -1,6 +1,6 @@
 #pragma once
 
-#include "HydraPluginPrivatePCH.h"
+#include "Components/ActorComponent.h"
 #include "HydraControllerData.h"
 #include "HydraControllerComponent.generated.h"
 

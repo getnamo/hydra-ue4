@@ -1,4 +1,3 @@
-#include "HydraPluginPrivatePCH.h"
 #include "HydraControllerData.h"
 #include <sixense.h>
 
