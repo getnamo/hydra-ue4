@@ -308,25 +308,26 @@ public:
 		HYDRA_BUTTON_TRIGGER
 		*/
 
+		//4.25 removed these?
 		LeftKeyMap.Empty();
-		LeftKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraLeftB1, FGamepadKeyNames::MotionController_Left_FaceButton1));
+		/*LeftKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraLeftB1, FGamepadKeyNames::MotionController_Left_FaceButton1));
 		LeftKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraLeftB2, FGamepadKeyNames::MotionController_Left_FaceButton2));
 		LeftKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraLeftB3, FGamepadKeyNames::MotionController_Left_FaceButton3));
 		LeftKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraLeftB4, FGamepadKeyNames::MotionController_Left_FaceButton4));
 		LeftKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraLeftStart, FGamepadKeyNames::MotionController_Left_FaceButton5));
 		LeftKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraLeftJoystickClick, FGamepadKeyNames::MotionController_Left_FaceButton6));
 		LeftKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraLeftBumper, FGamepadKeyNames::MotionController_Left_Shoulder));
-		LeftKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraLeftTriggerClick, FGamepadKeyNames::MotionController_Left_Trigger));
+		LeftKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraLeftTriggerClick, FGamepadKeyNames::MotionController_Left_Trigger));*/
 
 		RightKeyMap.Empty();
-		RightKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraRightB1, FGamepadKeyNames::MotionController_Right_FaceButton1));
+		/*RightKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraRightB1, FGamepadKeyNames::MotionController_Right_FaceButton1));
 		RightKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraRightB2, FGamepadKeyNames::MotionController_Right_FaceButton2));
 		RightKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraRightB3, FGamepadKeyNames::MotionController_Right_FaceButton3));
 		RightKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraRightB4, FGamepadKeyNames::MotionController_Right_FaceButton4));
 		RightKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraRightStart, FGamepadKeyNames::MotionController_Right_FaceButton5));
 		RightKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraRightJoystickClick, FGamepadKeyNames::MotionController_Right_FaceButton6));
 		RightKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraRightBumper, FGamepadKeyNames::MotionController_Right_Shoulder));
-		RightKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraRightTriggerClick, FGamepadKeyNames::MotionController_Right_Trigger));
+		RightKeyMap.Add(FHydraKeyMap(EKeysHydra::HydraRightTriggerClick, FGamepadKeyNames::MotionController_Right_Trigger));*/
 	}
 
 	//Init and Runtime
@@ -343,7 +344,7 @@ public:
 		//	TEXT("Plugins"), TEXT("HydraPlugin"), TEXT("Binaries/Win64")), TEXT("sixense_x64.dll"));
 
 		//Define Paths for direct dll bind
-		FString BinariesRoot = FPaths::Combine(*FPaths::GameDir(), TEXT("Binaries"));
+		FString BinariesRoot = FPaths::Combine(*FPaths::ProjectDir(), TEXT("Binaries"));
 		FString PluginRoot = IPluginManager::Get().FindPlugin("HydraPlugin")->GetBaseDir();
 		FString PlatformString;
 		FString SixenseDLLString;
@@ -696,12 +697,12 @@ void FHydraController::HydraInputTick()
 			if (leftHand)
 			{
 				EmitAnalogInputEventForKey(EKeysHydra::HydraLeftTrigger, Latest.Trigger, 0, 0);
-				EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Left_TriggerAxis, Latest.Trigger, 0, 0);
+				//EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Left_TriggerAxis, Latest.Trigger, 0, 0);
 			}
 			else
 			{
 				EmitAnalogInputEventForKey(EKeysHydra::HydraRightTrigger, Latest.Trigger, 0, 0);
-				EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Right_TriggerAxis, Latest.Trigger, 0, 0);
+				//EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Right_TriggerAxis, Latest.Trigger, 0, 0);
 			}
 
 			if (Latest.TriggerPressed != Previous.TriggerPressed)
@@ -761,16 +762,16 @@ void FHydraController::HydraInputTick()
 				EmitAnalogInputEventForKey(EKeysHydra::HydraLeftJoystickX, Latest.Joystick.X, 0, 0);
 				EmitAnalogInputEventForKey(EKeysHydra::HydraLeftJoystickY, Latest.Joystick.Y, 0, 0);
 
-				EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Left_Thumbstick_X, Latest.Joystick.X, 0, 0);
-				EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Left_Thumbstick_Y, Latest.Joystick.Y, 0, 0);
+				//EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Left_Thumbstick_X, Latest.Joystick.X, 0, 0);
+				//EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Left_Thumbstick_Y, Latest.Joystick.Y, 0, 0);
 			}
 			else
 			{
 				EmitAnalogInputEventForKey(EKeysHydra::HydraRightJoystickX, Latest.Joystick.X, 0, 0);
 				EmitAnalogInputEventForKey(EKeysHydra::HydraRightJoystickY, Latest.Joystick.Y, 0, 0);
 
-				EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Right_Thumbstick_X, Latest.Joystick.X, 0, 0);
-				EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Right_Thumbstick_Y, Latest.Joystick.Y, 0, 0);
+				//EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Right_Thumbstick_X, Latest.Joystick.X, 0, 0);
+				//EmitAnalogInputEventForKey(FGamepadKeyNames::MotionController_Right_Thumbstick_Y, Latest.Joystick.Y, 0, 0);
 			}
 			pluginPointer->CallFunctionOnDelegates([&](UHydraControllerComponent* Component)
 			{
