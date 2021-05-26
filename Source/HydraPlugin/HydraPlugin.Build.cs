@@ -76,11 +76,11 @@ namespace UnrealBuildTool.Rules
         {
             bool isLibrarySupported = false;
 
-            if ((Target.Platform == UnrealTargetPlatform.Win64) || (Target.Platform == UnrealTargetPlatform.Win32))
+            if ((Target.Platform == UnrealTargetPlatform.Win64))
             {
                 isLibrarySupported = true;
 
-                string PlatformString = (Target.Platform == UnrealTargetPlatform.Win64) ? "x64" : "x32";
+                string PlatformString = "x64";
                 string LibrariesPath = Path.Combine(ThirdPartyPath, "Sixense", "Lib");
 
                 //Lib based bind unsupported due to sixense wrong lib version compile, limiting platforms to windows 32/64
@@ -91,11 +91,6 @@ namespace UnrealBuildTool.Rules
                 {
                     PublicDelayLoadDLLs.Add("sixense_x64.dll");
                     RuntimeDependencies.Add(Path.Combine(BinariesPath, "Win64", "sixense_x64.dll"));
-                }
-                else
-                {
-                    PublicDelayLoadDLLs.Add("sixense.dll");
-                    RuntimeDependencies.Add(Path.Combine(BinariesPath, "Win32", "sixense.dll"));
                 }
             }
 
